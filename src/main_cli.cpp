@@ -475,6 +475,23 @@ static bool VerifyIdentityAfterWrite(const std::wstring& port, const Codeplug& c
     return true;
 }
 
+static std::vector<int> ParseIntList(const wchar_t* s) {
+    std::vector<int> out;
+    std::wstring w(s ? s : L""), cur;
+    for (wchar_t c : w) {
+        if (c == L',') {
+            if (!cur.empty()) {
+                out.push_back(_wtoi(cur.c_str()));
+                cur.clear();
+            }
+        } else {
+            cur.push_back(c);
+        }
+    }
+    if (!cur.empty()) out.push_back(_wtoi(cur.c_str()));
+    return out;
+}
+
 int wmain(int argc, wchar_t** argv) {
     CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
     if (argc < 2) {
@@ -501,6 +518,7 @@ int wmain(int argc, wchar_t** argv) {
         printf("  opendepot-cli --doctor <in.cpg> [<out.cpg>]\n");
         printf("  opendepot-cli --diff <a.cpg> <b.cpg> [--json]\n");
         printf("  opendepot-cli --copy-zone <src.cpg> <srcZone> <dst.cpg> <dstZone> <out.cpg>\n");
+        printf("  opendepot-cli --copy-zones <src.cpg> <srcZones> <dst.cpg> <dstZones> <out.cpg> [--trunking]\n");
         printf("  opendepot-cli --unlock <port>\n");
         printf("  opendepot-cli --security <port>\n");
         printf("  opendepot-cli --flashcode <in.cpg> [radio|platform]\n");
@@ -963,6 +981,27 @@ int wmain(int argc, wchar_t** argv) {
         if (!SaveCodeplug(argv[6], dst, err)) { printf("SAVE FAILED: %s\n", err.c_str()); return 2; }
         printf("copied source zone %d into destination zone %d -> %ls\n", _wtoi(argv[3]),
                _wtoi(argv[5]), argv[6]);
+        return 0;
+    }
+    if (cmd == L"--copy-zones" && argc >= 7) {
+        Codeplug src, dst;
+        if (!LoadCodeplug(argv[2], src)) { printf("LOAD SRC FAILED: %s\n", src.error.c_str()); return 2; }
+        if (!LoadCodeplug(argv[4], dst)) { printf("LOAD DST FAILED: %s\n", dst.error.c_str()); return 2; }
+        std::vector<int> sz = ParseIntList(argv[3]);
+        std::vector<int> dz = ParseIntList(argv[5]);
+        if (sz.empty() || sz.size() != dz.size()) { printf("zone list mismatch\n"); return 2; }
+        std::string err;
+        for (size_t i = 0; i < sz.size(); ++i)
+            if (!CopyZone(dst, src, sz[i], dz[i], err, true)) {
+                printf("COPY FAILED (zone %d->%d): %s\n", sz[i], dz[i], err.c_str());
+                return 2;
+            }
+        bool trunk = false;
+        for (int i = 1; i < argc; ++i)
+            if (std::wstring(argv[i]) == L"--trunking") trunk = true;
+        if (trunk && !CopyTrunking(dst, src, err)) { printf("TRUNKING FAILED: %s\n", err.c_str()); return 2; }
+        if (!SaveCodeplug(argv[6], dst, err)) { printf("SAVE FAILED: %s\n", err.c_str()); return 2; }
+        printf("copied %zu zone(s)%s -> %ls\n", sz.size(), trunk ? " + trunking" : "", argv[6]);
         return 0;
     }
     if (cmd == L"--backup-radio" && argc >= 4) {

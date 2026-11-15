@@ -69,7 +69,8 @@ Not implemented:
   `0x00510000`), entirely from the codeplug.
 - Copy a whole zone (channel names, frequencies/selections, per-channel
   personalities and entries) from one codeplug into a zone of another with
-  `--copy-zone`.
+  `--copy-zone`. `--copy-zones` does several zones at once, and `--trunking`
+  also copies the trunking system records.
 
 ## Supported models (built-in model database)
 

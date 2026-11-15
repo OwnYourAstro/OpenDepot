@@ -1236,7 +1236,8 @@ bool SetChannelFreq(Codeplug& cp, int zone1, int chan1, double rxMHz, double txM
     return false;
 }
 
-bool CopyZone(Codeplug& dst, const Codeplug& src, int srcZone1, int dstZone1, std::string& err) {
+bool CopyZone(Codeplug& dst, const Codeplug& src, int srcZone1, int dstZone1, std::string& err,
+              bool copyName) {
     err.clear();
     std::vector<ZoneView> sz, dz;
     if (!ParseZones(src, sz)) { err = "source has no zone table"; return false; }
@@ -1244,11 +1245,6 @@ bool CopyZone(Codeplug& dst, const Codeplug& src, int srcZone1, int dstZone1, st
     if (srcZone1 < 1 || srcZone1 > (int)sz.size()) { err = "source zone out of range"; return false; }
     if (dstZone1 < 1 || dstZone1 > (int)dz.size()) { err = "target zone out of range"; return false; }
     const int si = srcZone1 - 1, di = dstZone1 - 1;
-    if (sz[si].channels.size() != dz[di].channels.size()) {
-        err = "zone channel counts differ (" + std::to_string(sz[si].channels.size()) + " vs " +
-              std::to_string(dz[di].channels.size()) + "); cannot copy in place";
-        return false;
-    }
     auto refTagInst = [&](const Codeplug& cp, uint16_t refTag, uint16_t inst, uint16_t& tag,
                           uint16_t& sub) -> bool {
         const Record* r = FindRecord(cp, refTag, inst);
@@ -1306,7 +1302,7 @@ bool CopyZone(Codeplug& dst, const Codeplug& src, int srcZone1, int dstZone1, st
     };
     collect(src, scSub, slocs, sent);
     collect(dst, dcSub, dlocs, dent);
-    if (sent.size() != dent.size()) { err = "channel entry count mismatch"; return false; }
+    const size_t ncopy = std::min(sent.size(), dent.size());
     std::unordered_map<uint16_t, std::vector<uint8_t>> pages;
     for (const auto& l : dlocs) {
         if (!pages.count(l.page)) {
@@ -1315,7 +1311,7 @@ bool CopyZone(Codeplug& dst, const Codeplug& src, int srcZone1, int dstZone1, st
             pages[l.page] = PayloadOf(*pr);
         }
     }
-    for (size_t k = 0; k < dent.size(); ++k) {
+    for (size_t k = 0; k < ncopy; ++k) {
         std::vector<uint8_t> e = sent[k];
         e[2] = dent[k][2];  // keep destination channel index
         e[3] = dent[k][3];
@@ -1329,7 +1325,7 @@ bool CopyZone(Codeplug& dst, const Codeplug& src, int srcZone1, int dstZone1, st
         }
     // Copy per-channel personality records (0x0FFB header/params, 0x0FCD data),
     // remapping the channel index field to the destination slot.
-    for (size_t k = 0; k < dent.size(); ++k) {
+    for (size_t k = 0; k < ncopy; ++k) {
         const uint16_t srcIdx = uint16_t((sent[k][2] << 8) | sent[k][3]);
         const uint16_t dstIdx = uint16_t((dent[k][2] << 8) | dent[k][3]);
         for (uint16_t tag : {uint16_t(0x0FFB), uint16_t(0x0FCD)}) {
@@ -1346,6 +1342,35 @@ bool CopyZone(Codeplug& dst, const Codeplug& src, int srcZone1, int dstZone1, st
                 err = "set channel personality failed";
                 return false;
             }
+        }
+    }
+    if (copyName) SetZoneName(dst, dstZone1, sz[si].name);
+    return true;
+}
+
+bool CopyTrunking(Codeplug& dst, const Codeplug& src, std::string& err) {
+    err.clear();
+    static const uint16_t tags[] = {
+        0x0015, 0x0017, 0x001A, 0x0022, 0x003A, 0x003B, 0x003C, 0x003D, 0x003E, 0x003F,
+        0x004D, 0x004E, 0x0F9F, 0x0FA0, 0x0FA8, 0x0FA9, 0x0FD0, 0x0FD1, 0x0FD2, 0x0FD3,
+        0x0FD4, 0x0FD5, 0x0FD6, 0x0FD7, 0x0FD8, 0x0FD9, 0x0FDA, 0x0FDB, 0x0FDC, 0x0FDD,
+        0x0FDE, 0x0FDF, 0x0FE0, 0x0FE1, 0x0FE2, 0x0FE3, 0x0FE4, 0x0FE5, 0x0FE6, 0x0FE7,
+        0x0FE8, 0x0FE9, 0x0FEA, 0x0FEB, 0x0FEC, 0x0FED, 0x0FEE, 0x0FEF,
+        0x0FF1, 0x0FF2, 0x0FF3, 0x0FF7, 0x0FF8, 0x0FFA, 0x0FBE};
+    for (const auto& sr : src.records) {
+        const uint16_t t = uint16_t(sr.id >> 16);
+        bool want = false;
+        for (uint16_t x : tags)
+            if (x == t) {
+                want = true;
+                break;
+            }
+        if (!want) continue;
+        const uint16_t inst = uint16_t(sr.id & 0xFFFF);
+        if (!FindRecord(dst, t, inst)) continue;  // overwrite existing only
+        if (!SetItemPayload(dst, t, inst, PayloadOf(sr))) {
+            err = "copy trunking record failed";
+            return false;
         }
     }
     return true;

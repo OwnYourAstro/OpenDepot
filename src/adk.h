@@ -167,7 +167,9 @@ bool ParseZones(const Codeplug& cp, std::vector<ZoneView>& zones);
 bool SetZoneName(Codeplug& cp, int zone1, const std::string& name);
 bool SetChannelName(Codeplug& cp, int zone1, int chan1, const std::string& name);
 bool SetChannelFreq(Codeplug& cp, int zone1, int chan1, double rxMHz, double txMHz);
-bool CopyZone(Codeplug& dst, const Codeplug& src, int srcZone1, int dstZone1, std::string& err);
+bool CopyZone(Codeplug& dst, const Codeplug& src, int srcZone1, int dstZone1, std::string& err,
+              bool copyName = false);
+bool CopyTrunking(Codeplug& dst, const Codeplug& src, std::string& err);
 double WordToMHz(uint32_t word);
 uint32_t MHzToWord(double mhz);
 
