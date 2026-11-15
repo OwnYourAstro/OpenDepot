@@ -195,6 +195,7 @@ opendepot-cli --radio-report <port> [--json]
 opendepot-cli --doctor <in.cpg> [<out.cpg>]
 opendepot-cli --diff <a.cpg> <b.cpg> [--json]
 opendepot-cli --copy-zone <src.cpg> <srcZone> <dst.cpg> <dstZone> <out.cpg>
+opendepot-cli --copy-zones <src.cpg> <srcZones> <dst.cpg> <dstZones> <out.cpg> [--trunking]
 opendepot-cli --backup-radio <port> <outdir>
 ```
 
