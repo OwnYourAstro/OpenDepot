@@ -596,6 +596,7 @@ QWidget* MainWindow::buildZonesPage() {
 QWidget* MainWindow::buildRadioWidePage() {
     auto* page = new QWidget;
     rwBound_.clear();
+    rwTabFields_.clear();
     auto* lay = new QVBoxLayout(page);
     lay->setContentsMargins(32, 26, 32, 32);
     lay->setSpacing(10);
@@ -754,9 +755,29 @@ QWidget* MainWindow::buildRadioWidePage() {
     scroll->setWidget(content);
 
     auto* generalButton = addPage("General", scroll, 3, 0);
+    auto addTableTab = [&](const QString& name, int row, int col) {
+        auto* w = new QWidget;
+        auto* wl = new QVBoxLayout(w);
+        auto* hint = new QLabel("Decoded fields from records 0x000A / 0x000C.");
+        hint->setObjectName("muted");
+        wl->addWidget(hint);
+        auto* table = new QTableWidget(0, 2);
+        table->setHorizontalHeaderLabels({"Field", "Value"});
+        table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+        table->verticalHeader()->setVisible(false);
+        table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+        table->setShowGrid(false);
+        rwTabFields_.insert(name, table);
+        wl->addWidget(table, 1);
+        addPage(name, w, row, col);
+    };
     const char* generalTabs[] = {"Emergency", "TPS", "Alert Tones", "Time-Out Timers", "Alarm",
                                  "Home Mode"};
     for (int i = 0; i < 6; ++i) {
+        if (QString::fromLatin1(generalTabs[i]) == "TPS") {
+            addTableTab(QString::fromLatin1(generalTabs[i]), 3, i + 1);
+            continue;
+        }
         auto* w = new QWidget;
         auto* wl = new QVBoxLayout(w);
         if (QString::fromLatin1(generalTabs[i]) == "Emergency") {
@@ -896,13 +917,7 @@ QWidget* MainWindow::buildRadioWidePage() {
     };
     for (int row = 0; row < 3; ++row) {
         for (int col = 0; col < 5 && rows[row][col]; ++col) {
-            auto* w = new QWidget;
-            auto* wl = new QVBoxLayout(w);
-            auto* lbl = new QLabel("This page is not decoded yet.");
-            lbl->setObjectName("muted");
-            wl->addWidget(lbl);
-            wl->addStretch(1);
-            addPage(QString::fromLatin1(rows[row][col]), w, row, col);
+            addTableTab(QString::fromLatin1(rows[row][col]), row, col);
         }
     }
     auto* named = new QWidget;
@@ -1027,6 +1042,77 @@ void MainWindow::refreshRadioWidePage() {
         } else if (auto* spin = qobject_cast<QSpinBox*>(widget)) {
             spin->setValue(static_cast<int>(raw));
             spin->setEnabled(true);
+        }
+    }
+
+    for (auto it = rwTabFields_.cbegin(); it != rwTabFields_.cend(); ++it) {
+        QTableWidget* table = it.value();
+        table->setRowCount(0);
+        QStringList terms;
+        const QString tab = it.key();
+        if (tab.contains("Tx Audio")) {
+            terms = {"Tx", "Gain", "Microphone", "Audio", "AGC", "Balance"};
+        } else if (tab.contains("Rx Audio")) {
+            terms = {"Rx", "Audio", "Volume", "AGC", "Gain"};
+        } else if (tab.contains("Digital Audio")) {
+            terms = {"Digital", "Audio", "Gain", "AGC", "Balance"};
+        } else if (tab.contains("VRS")) {
+            terms = {"VRS", "DVRS"};
+        } else if (tab == "Data") {
+            terms = {"Data", "IP", "TCP", "UDP", "Context", "Packet", "SNMP"};
+        } else if (tab == "Control Head") {
+            terms = {"Control Head"};
+        } else if (tab == "PA/Siren") {
+            terms = {"PA", "Siren"};
+        } else if (tab == "Labtool") {
+            terms = {"Labtool"};
+        } else if (tab == "TPS") {
+            terms = {"TPS", "Talkgroup", "Priority"};
+        } else {
+            terms = {"Advanced", "Control", "Timer", "Power", "Audio"};
+        }
+        for (size_t i = 0; i < allFieldCount; ++i) {
+            const auto& field = allFields[i];
+            const QString group = QString::fromLatin1(field.group ? field.group : "");
+            if (group != "0xf1a8450" && group != "0xf1a7a30") continue;
+            const QString name = QString::fromLatin1(field.name ? field.name : "");
+            bool match = false;
+            for (const auto& term : terms) {
+                if (name.contains(term, Qt::CaseInsensitive)) {
+                    match = true;
+                    break;
+                }
+            }
+            if (!match || field.bits == 0) continue;
+            const uint16_t tag = group == "0xf1a8450" ? 0x000A : 0x000C;
+            const auto* record = FindRecord(cp_, tag, 0);
+            if (!record) continue;
+            const auto payload = RecordPayload(*record);
+            if (size_t(field.off) + size_t((field.bits + 7) / 8) > payload.size()) continue;
+            const uint64_t raw = opendepot::ReadFieldBits(payload.data(), payload.size(), field.off,
+                                                          field.bits, field.msb);
+            QString value;
+            if (field.bits >= 8) {
+                std::string text;
+                for (size_t b = 0; b < size_t(field.bits + 7) / 8; ++b) {
+                    const uint8_t c = payload[field.off + b];
+                    if (c == 0) break;
+                    if (c >= 0x20 && c < 0x7F) text.push_back(char(c));
+                }
+                value = QString::fromLatin1(text.c_str());
+            }
+            if (value.isEmpty())
+                value = field.bits > 32 ? QString("0x%1").arg(static_cast<qulonglong>(raw), 0, 16)
+                                        : QString::number(static_cast<qulonglong>(raw));
+            const int row = table->rowCount();
+            table->insertRow(row);
+            table->setItem(row, 0, new QTableWidgetItem(name));
+            table->setItem(row, 1, new QTableWidgetItem(value));
+        }
+        if (table->rowCount() == 0) {
+            table->insertRow(0);
+            table->setItem(0, 0, new QTableWidgetItem("No matching named fields."));
+            table->setSpan(0, 0, 1, 2);
         }
     }
 

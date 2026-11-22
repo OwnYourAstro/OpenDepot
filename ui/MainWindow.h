@@ -141,6 +141,7 @@ private:
     QLabel* cpsTableInfo_ = nullptr;
     QSpinBox* rwMaxChannels_ = nullptr;
     QHash<QString, QWidget*> rwBound_;
+    QHash<QString, QTableWidget*> rwTabFields_;
     QTableWidget* rwNamedFields_ = nullptr;
     QLineEdit* zoneNameEdit_ = nullptr;
     QLineEdit* channelNameEdit_ = nullptr;
