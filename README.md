@@ -74,9 +74,8 @@ Not implemented:
 
 - Building zones/channels/personalities/talkgroups from scratch (the record set
   is fixed by the ISH directory).
-- Editable Radio Configuration forms (Radio Wide, Controls, Keypad, Display &
-  Menu) in the GUI — the core exposes the records, but those tree nodes are
-  still placeholders.
+- Named Radio Configuration forms (Radio Wide tabs, Controls, Keypad, Display &
+  Menu); those sections currently open the raw record/plain-text editor.
 - Field-level names for every radio-wide/personality/trunking byte; see
   `docs/CPS_MODEL.md` and `docs/CODEPLUG_TAGS.md`.
 - Create wizard, FLASHcode editor, and passcode/backup screens in the GUI.
@@ -123,9 +122,13 @@ CPS model.
   Trunking, Conventional Personality, aliases, MPL, MDC, DTMF, ASTRO Systems,
   Scan, Expert - opens a record explorer. It lists the section's records with
   tag/instance/size/family, resolves references and strings, edits name tables,
-  and edits any record payload as hex.
+  shows every byte as plain text (offset, hex, U8, U16, U32, ASCII; double-click
+  U8 to edit), and accepts whole-payload hex edits.
+- **Export Plain Text** - dumps every section, record and byte to a `.txt`.
 - **Service Report**, **Codeplug Doctor**, **Codeplug Diff**, **Records**.
-- **Radio** - COM port entry, native Read/Write with a busy dialog and a log.
+- **Radio** - serial-port picker (auto-detected, refresh, remembers the last
+  port, editable for unlisted ports), native Read/Write with a busy dialog and a
+  log.
 
 Edits update the in-memory codeplug and are written with **File > Save** (or
 Save As). The Radio page uses `opendepot::RadioSession` (in-tree PPP/RCMP), not

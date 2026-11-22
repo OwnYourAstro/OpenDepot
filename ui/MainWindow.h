@@ -15,6 +15,7 @@
 #include "opendepot/core/model.h"
 
 class QAction;
+class QComboBox;
 class QGridLayout;
 class QLabel;
 class QLineEdit;
@@ -24,6 +25,7 @@ class QPushButton;
 class QScrollArea;
 class QStackedWidget;
 class QTableWidget;
+class QTableWidgetItem;
 class QTimer;
 class QTreeWidget;
 class QTreeWidgetItem;
@@ -75,7 +77,10 @@ private:
     void refreshSectionRecord(int row);
     void applySectionPayload();
     void applySectionNames();
+    void applyFieldEdit(QTableWidgetItem* item);
+    void exportPlainText();
     void applyChannelEdit();
+    void refreshPorts();
     void refreshAfterEdit();
     void refreshZones();
     void selectChannelRow(int zone, int channel);
@@ -134,6 +139,7 @@ private:
     QTableWidget* sectionRecords_ = nullptr;
     QPlainTextEdit* sectionDetail_ = nullptr;
     QPlainTextEdit* sectionHex_ = nullptr;
+    QTableWidget* sectionFields_ = nullptr;
     QTableWidget* sectionNames_ = nullptr;
     QLineEdit* sectionNameEdit_ = nullptr;
     QPushButton* sectionApplyNames_ = nullptr;
@@ -141,7 +147,7 @@ private:
     QPlainTextEdit* report_ = nullptr;
     QPlainTextEdit* doctor_ = nullptr;
     QPlainTextEdit* diff_ = nullptr;
-    QLineEdit* port_ = nullptr;
+    QComboBox* port_ = nullptr;
     QPlainTextEdit* radioLog_ = nullptr;
     QProgressDialog* busy_ = nullptr;
     QTimer* poll_ = nullptr;

@@ -3,12 +3,22 @@
 
 #include "MainWindow.h"
 
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+
 #include <QAction>
 #include <QAbstractItemView>
 #include <QApplication>
 #include <QColor>
+#include <QComboBox>
 #include <QDateTime>
 #include <QDialog>
+#include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFont>
@@ -26,8 +36,10 @@
 #include <QProgressDialog>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QSettings>
 #include <QSignalBlocker>
 #include <QStackedWidget>
+#include <QTabWidget>
 #include <QStatusBar>
 #include <QStyle>
 #include <QTableWidget>
@@ -96,6 +108,35 @@ void PutName(std::vector<uint8_t>& p, size_t off, size_t width, const QString& n
     std::copy(bytes.begin(), bytes.begin() + static_cast<std::ptrdiff_t>(n),
               p.begin() + static_cast<std::ptrdiff_t>(off));
 }
+
+QStringList AvailableComPorts() {
+    QStringList ports;
+    HKEY key = nullptr;
+    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"HARDWARE\\DEVICEMAP\\SERIALCOMM", 0, KEY_READ, &key) ==
+        ERROR_SUCCESS) {
+        wchar_t name[256];
+        wchar_t data[256];
+        for (DWORD i = 0;; ++i) {
+            DWORD nameLen = 256;
+            DWORD dataLen = sizeof(data);
+            DWORD type = 0;
+            const LONG r = RegEnumValueW(key, i, name, &nameLen, nullptr, &type,
+                                         reinterpret_cast<LPBYTE>(data), &dataLen);
+            if (r == ERROR_NO_MORE_ITEMS) break;
+            if (r != ERROR_SUCCESS) break;
+            if (type == REG_SZ) ports << QString::fromWCharArray(data).trimmed();
+        }
+        RegCloseKey(key);
+    }
+    ports.removeDuplicates();
+    std::sort(ports.begin(), ports.end(), [](const QString& a, const QString& b) {
+        const bool ca = a.startsWith("COM", Qt::CaseInsensitive);
+        const bool cb = b.startsWith("COM", Qt::CaseInsensitive);
+        if (ca != cb) return ca;
+        return a.mid(3).toInt() < b.mid(3).toInt();
+    });
+    return ports;
+}
 }  // namespace
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
@@ -127,6 +168,9 @@ void MainWindow::setupMenu() {
     saveAct_->setShortcut(QKeySequence::SaveAs);
     saveAct_->setEnabled(false);
     connect(saveAct_, &QAction::triggered, this, &MainWindow::saveCodeplugAs);
+
+    auto* exportTxt = file->addAction("Export Plain &Text...");
+    connect(exportTxt, &QAction::triggered, this, &MainWindow::exportPlainText);
 
     file->addSeparator();
     auto* quit = file->addAction("E&xit");
@@ -581,17 +625,36 @@ QWidget* MainWindow::buildSectionPage() {
     sectionNameEdit_ = new QLineEdit;
     sectionNameEdit_->setVisible(false);
     payloadCol->addWidget(sectionNameEdit_);
-    auto* payloadLabel = new QLabel("Record payload (hex)");
-    payloadLabel->setObjectName("sectionTitle");
-    payloadCol->addWidget(payloadLabel);
+    auto* tabs = new QTabWidget;
+    sectionFields_ = new QTableWidget(0, 6);
+    sectionFields_->setHorizontalHeaderLabels({"Offset", "Hex", "U8", "U16", "U32", "ASCII"});
+    sectionFields_->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    sectionFields_->horizontalHeader()->setSectionResizeMode(5, QHeaderView::Stretch);
+    sectionFields_->verticalHeader()->setVisible(false);
+    sectionFields_->setFont(QFont("Consolas", 10));
+    sectionFields_->setEditTriggers(QAbstractItemView::DoubleClicked |
+                                    QAbstractItemView::EditKeyPressed);
+    connect(sectionFields_, &QTableWidget::itemChanged, this, &MainWindow::applyFieldEdit);
+    tabs->addTab(sectionFields_, "Fields (plain text)");
+
+    auto* hexWrap = new QWidget;
+    auto* hexLay = new QVBoxLayout(hexWrap);
+    hexLay->setContentsMargins(0, 0, 0, 0);
+    hexLay->setSpacing(6);
     sectionHex_ = new QPlainTextEdit;
     sectionHex_->setPlaceholderText("Select a record to edit its payload.");
     sectionHex_->setFont(QFont("Consolas", 10));
-    payloadCol->addWidget(sectionHex_, 1);
+    hexLay->addWidget(sectionHex_, 1);
     auto* applyPayload = new QPushButton("Apply payload");
     applyPayload->setObjectName("accent");
     connect(applyPayload, &QPushButton::clicked, this, &MainWindow::applySectionPayload);
-    payloadCol->addWidget(applyPayload, 0, Qt::AlignLeft);
+    hexLay->addWidget(applyPayload, 0, Qt::AlignLeft);
+    tabs->addTab(hexWrap, "Hex");
+    payloadCol->addWidget(tabs, 1);
+    auto* exportBtn = new QPushButton("Export plain text...");
+    exportBtn->setObjectName("small");
+    connect(exportBtn, &QPushButton::clicked, this, &MainWindow::exportPlainText);
+    payloadCol->addWidget(exportBtn, 0, Qt::AlignLeft);
     editRow->addLayout(payloadCol, 1);
 
     lay->addLayout(editRow, 3);
@@ -642,9 +705,21 @@ QWidget* MainWindow::buildRadioPage() {
     cl->setSpacing(10);
     auto* row = new QHBoxLayout;
     row->addWidget(new QLabel("Port"));
-    port_ = new QLineEdit("COM20");
-    port_->setMaximumWidth(150);
+    port_ = new QComboBox;
+    port_->setEditable(true);
+    port_->setMinimumWidth(130);
+    const QStringList ports = AvailableComPorts();
+    port_->addItems(ports);
+    const QString saved = QSettings().value("radio/port", "COM20").toString();
+    if (ports.contains(saved))
+        port_->setCurrentText(saved);
+    else
+        port_->setEditText(saved.isEmpty() ? "COM20" : saved);
     row->addWidget(port_);
+    auto* refreshPorts = new QPushButton("Refresh");
+    refreshPorts->setObjectName("small");
+    connect(refreshPorts, &QPushButton::clicked, this, &MainWindow::refreshPorts);
+    row->addWidget(refreshPorts);
     auto* read = new QPushButton("Read Radio");
     read->setObjectName("accent");
     auto* write = new QPushButton("Write Radio...");
@@ -913,27 +988,29 @@ void MainWindow::refreshSectionList() {
     if (!model_ || !sectionRecords_ || sectionIndex_ < 0 ||
         sectionIndex_ >= static_cast<int>(model_->Sections().size()))
         return;
-    const QSignalBlocker block(sectionRecords_);
-    sectionRecords_->setRowCount(0);
-    const auto& s = model_->Sections()[sectionIndex_];
-    for (uint32_t id : s.records) {
-        const auto* n = findNode(id);
-        if (!n) continue;
-        const int row = sectionRecords_->rowCount();
-        sectionRecords_->insertRow(row);
-        auto* idItem = new QTableWidgetItem(
-            QString("0x%1").arg(static_cast<qulonglong>(id), 8, 16, QChar('0')).toUpper());
-        idItem->setData(kRoleRecordId, id);
-        sectionRecords_->setItem(row, 0, idItem);
-        sectionRecords_->setItem(
-            row, 1,
-            new QTableWidgetItem(
-                QString("0x%1").arg(static_cast<int>(n->tag), 4, 16, QChar('0')).toUpper()));
-        sectionRecords_->setItem(row, 2, new QTableWidgetItem(QString::number(n->inst)));
-        sectionRecords_->setItem(row, 3, new QTableWidgetItem(QString::number(n->length)));
-        QString desc = QString::fromStdString(n->family);
-        if (!n->name.empty()) desc += "  -  " + QString::fromStdString(n->name);
-        sectionRecords_->setItem(row, 4, new QTableWidgetItem(desc));
+    {
+        const QSignalBlocker block(sectionRecords_);
+        sectionRecords_->setRowCount(0);
+        const auto& s = model_->Sections()[sectionIndex_];
+        for (uint32_t id : s.records) {
+            const auto* n = findNode(id);
+            if (!n) continue;
+            const int row = sectionRecords_->rowCount();
+            sectionRecords_->insertRow(row);
+            auto* idItem = new QTableWidgetItem(
+                QString("0x%1").arg(static_cast<qulonglong>(id), 8, 16, QChar('0')).toUpper());
+            idItem->setData(kRoleRecordId, id);
+            sectionRecords_->setItem(row, 0, idItem);
+            sectionRecords_->setItem(
+                row, 1,
+                new QTableWidgetItem(
+                    QString("0x%1").arg(static_cast<int>(n->tag), 4, 16, QChar('0')).toUpper()));
+            sectionRecords_->setItem(row, 2, new QTableWidgetItem(QString::number(n->inst)));
+            sectionRecords_->setItem(row, 3, new QTableWidgetItem(QString::number(n->length)));
+            QString desc = QString::fromStdString(n->family);
+            if (!n->name.empty()) desc += "  -  " + QString::fromStdString(n->name);
+            sectionRecords_->setItem(row, 4, new QTableWidgetItem(desc));
+        }
     }
     if (sectionRecords_->rowCount() > 0) sectionRecords_->selectRow(0);
 }
@@ -947,6 +1024,43 @@ void MainWindow::refreshSectionRecord(int row) {
     if (!n) return;
 
     sectionHex_->setPlainText(HexBytes(n->payload));
+    {
+        const QSignalBlocker block(sectionFields_);
+        sectionFields_->setRowCount(0);
+        const auto& p = n->payload;
+        for (size_t off = 0; off < p.size(); ++off) {
+            const int rowIdx = sectionFields_->rowCount();
+            sectionFields_->insertRow(rowIdx);
+            const uint16_t v16 =
+                off + 1 < p.size() ? uint16_t((p[off] << 8) | p[off + 1]) : 0;
+            const uint32_t v32 = off + 3 < p.size()
+                                     ? (uint32_t(p[off]) << 24) | (uint32_t(p[off + 1]) << 16) |
+                                           (uint32_t(p[off + 2]) << 8) | p[off + 3]
+                                     : 0;
+            auto* offItem = new QTableWidgetItem(
+                QString("0x%1").arg(static_cast<qulonglong>(off), 4, 16, QChar('0')).toUpper());
+            offItem->setData(Qt::UserRole, int(off));
+            offItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+            sectionFields_->setItem(rowIdx, 0, offItem);
+            auto* hexItem = new QTableWidgetItem(
+                QString("%1").arg(p[off], 2, 16, QChar('0')).toUpper());
+            hexItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+            sectionFields_->setItem(rowIdx, 1, hexItem);
+            auto* u8Item = new QTableWidgetItem(QString::number(p[off]));
+            u8Item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsEditable);
+            sectionFields_->setItem(rowIdx, 2, u8Item);
+            auto* u16Item = new QTableWidgetItem(off + 1 < p.size() ? QString::number(v16) : "");
+            u16Item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+            sectionFields_->setItem(rowIdx, 3, u16Item);
+            auto* u32Item = new QTableWidgetItem(off + 3 < p.size() ? QString::number(v32) : "");
+            u32Item->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+            sectionFields_->setItem(rowIdx, 4, u32Item);
+            auto* ascItem = new QTableWidgetItem(
+                p[off] >= 0x20 && p[off] < 0x7F ? QString(QChar(p[off])) : QString("."));
+            ascItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+            sectionFields_->setItem(rowIdx, 5, ascItem);
+        }
+    }
     const bool isTable = n->family == "name_table" && !n->names.empty();
     const bool isName = n->family == "name";
     sectionNames_->setVisible(isTable);
@@ -1057,6 +1171,143 @@ void MainWindow::applySectionNames() {
     refreshAfterEdit();
     if (row < sectionRecords_->rowCount()) sectionRecords_->selectRow(row);
     statusBar()->showMessage("Names updated in memory - File > Save to keep them.", 8000);
+}
+
+void MainWindow::applyFieldEdit(QTableWidgetItem* item) {
+    if (!model_ || !sectionRecords_ || !sectionFields_ || !item) return;
+    if (item->column() != 2) return;
+    const int recordRow = sectionRecords_->currentRow();
+    if (recordRow < 0) return;
+    auto* idItem = sectionRecords_->item(recordRow, 0);
+    if (!idItem) return;
+    const uint32_t id = idItem->data(kRoleRecordId).toUInt();
+    const auto* n = findNode(id);
+    if (!n) return;
+    auto* offItem = sectionFields_->item(item->row(), 0);
+    if (!offItem) return;
+    const int off = offItem->data(Qt::UserRole).toInt();
+    const QString text = item->text().trimmed();
+    bool ok = false;
+    const int value = text.startsWith("0x", Qt::CaseInsensitive) ? text.mid(2).toInt(&ok, 16)
+                                                                 : text.toInt(&ok);
+    if (!ok || value < 0 || value > 255 || off < 0 || off >= int(n->payload.size())) {
+        QMessageBox::warning(this, "Field", "Byte value must be 0-255 (decimal or 0x..).");
+        refreshSectionRecord(recordRow);
+        return;
+    }
+    std::vector<uint8_t> payload = n->payload;
+    payload[size_t(off)] = uint8_t(value);
+    const uint16_t tag = n->tag;
+    const uint16_t inst = n->inst;
+    if (!model_->SetRecordPayload(tag, inst, payload)) {
+        QMessageBox::warning(this, "Field", "The record could not be updated.");
+        return;
+    }
+    refreshAfterEdit();
+    for (int row = 0; row < sectionRecords_->rowCount(); ++row) {
+        auto* it = sectionRecords_->item(row, 0);
+        if (it && it->data(kRoleRecordId).toUInt() == id) {
+            sectionRecords_->selectRow(row);
+            break;
+        }
+    }
+    statusBar()->showMessage("Byte updated in memory - File > Save to keep it.", 8000);
+}
+
+void MainWindow::exportPlainText() {
+    if (!have_ || !model_) {
+        QMessageBox::information(this, "Export plain text", "Open a codeplug first.");
+        return;
+    }
+    const QString file = QFileDialog::getSaveFileName(this, "Export plain text", QString(),
+                                                      "Text (*.txt)");
+    if (file.isEmpty()) return;
+    QString out;
+    out += "OpenDepot plain-text codeplug dump\n";
+    out += QString("Model: %1\nSerial: %2\nFLASHcode: %3\nRecords: %4\n\n")
+               .arg(QString::fromStdString(cp_.header.model),
+                    QString::fromStdString(cp_.header.serial),
+                    QString::fromStdString(opendepot::GetFlashcode(cp_)))
+               .arg(model_->RecordCount());
+    for (const auto& s : model_->Sections()) {
+        out += QString("=== %1 / %2  [%3] ===\n")
+                   .arg(QString::fromStdString(s.group), QString::fromStdString(s.name),
+                        QString::fromUtf8(opendepot::ConfidenceName(s.confidence)));
+        for (uint32_t id : s.records) {
+            const auto* n = findNode(id);
+            if (!n) continue;
+            out += QString("\n0x%1  tag 0x%2  inst %3  len %4  family %5\n")
+                       .arg(static_cast<qulonglong>(id), 8, 16, QChar('0'))
+                       .arg(static_cast<int>(n->tag), 4, 16, QChar('0'))
+                       .arg(static_cast<int>(n->inst))
+                       .arg(n->length)
+                       .arg(QString::fromStdString(n->family));
+            if (!n->name.empty())
+                out += "  name: " + QString::fromStdString(n->name) + "\n";
+            if (!n->names.empty()) {
+                QStringList names;
+                for (const auto& x : n->names) names << QString::fromStdString(x);
+                out += "  names: " + names.join(" | ") + "\n";
+            }
+            if (!n->strings.empty()) {
+                QStringList ss;
+                for (const auto& x : n->strings) ss << QString::fromStdString(x);
+                out += "  strings: " + ss.join(" | ") + "\n";
+            }
+            if (!n->references.empty()) {
+                QStringList rs;
+                for (const auto& r : n->references)
+                    rs << QString("0x%1/%2@%3")
+                              .arg(static_cast<int>(r.tag), 4, 16, QChar('0'))
+                              .arg(static_cast<int>(r.inst))
+                              .arg(r.offset);
+                out += "  refs: " + rs.join(", ") + "\n";
+            }
+            const auto& p = n->payload;
+            for (size_t off = 0; off < p.size(); off += 16) {
+                out += QString("  %1  ")
+                           .arg(static_cast<qulonglong>(off), 4, 16, QChar('0'))
+                           .toUpper();
+                const size_t count = std::min<size_t>(16, p.size() - off);
+                for (size_t i = 0; i < 16; ++i) {
+                    if (i < count)
+                        out += QString("%1 ").arg(p[off + i], 2, 16, QChar('0')).toUpper();
+                    else
+                        out += "   ";
+                }
+                out += " |";
+                for (size_t i = 0; i < count; ++i) {
+                    const uint8_t c = p[off + i];
+                    out += (c >= 0x20 && c < 0x7F) ? QChar(c) : QChar('.');
+                }
+                out += "|\n";
+            }
+        }
+        out += "\n";
+    }
+    QFile f(file);
+    if (!f.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        QMessageBox::warning(this, "Export plain text", "Cannot write the selected file.");
+        return;
+    }
+    f.write(out.toUtf8());
+    f.close();
+    statusBar()->showMessage("Exported plain text to " + file, 8000);
+}
+
+void MainWindow::refreshPorts() {
+    if (!port_) return;
+    const QString current = port_->currentText().trimmed();
+    const QStringList ports = AvailableComPorts();
+    const QSignalBlocker block(port_);
+    port_->clear();
+    port_->addItems(ports);
+    if (!current.isEmpty())
+        port_->setEditText(current);
+    else if (!ports.isEmpty())
+        port_->setCurrentIndex(0);
+    else
+        port_->setEditText("COM20");
 }
 
 void MainWindow::applyChannelEdit() {
@@ -1248,7 +1499,8 @@ void MainWindow::readRadio() {
     job->isWrite = false;
     RadioJob* j = job.get();
     opendepot::Codeplug base = cp_;
-    const std::string port = port_ ? port_->text().trimmed().toStdString() : "COM20";
+    const std::string port = port_ ? port_->currentText().trimmed().toStdString() : "COM20";
+    QSettings().setValue("radio/port", QString::fromStdString(port));
     appendRadioLog("Reading " + QString::fromStdString(port) + "...");
     showBusy("Reading radio...");
     j->thread = std::thread([j, base, port]() {
@@ -1325,7 +1577,8 @@ void MainWindow::writeRadio() {
                                  "\n\nWriting this codeplug could brick the radio.");
         return;
     }
-    const std::string port = port_ ? port_->text().trimmed().toStdString() : "COM20";
+    const std::string port = port_ ? port_->currentText().trimmed().toStdString() : "COM20";
+    QSettings().setValue("radio/port", QString::fromStdString(port));
     const auto answer = QMessageBox::warning(
         this, "Write to radio",
         QString("Write %1 records to %2?\n\nThis can brick the radio. Keep a verified backup.")

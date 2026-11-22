@@ -166,8 +166,13 @@ The Qt app builds its tree directly from `CodeplugModel::Sections()`:
 - Every other section opens the record explorer: a table of the section's
   records (ID, tag, instance, size, family/name), decoded references and
   strings, an editable name table (for `name_table` and single-`name` records),
-  and a hex payload editor (`SetRecordPayload`).
+  a **Fields (plain text)** tab (offset, hex, U8, U16, U32, ASCII; double-click
+  U8 to write one byte), and a **Hex** payload editor (`SetRecordPayload`).
+- **Export Plain Text** writes every section, record, name, reference and byte
+  to a text file.
 - **File > Save** writes the edited codeplug in place; **Save As** writes a copy.
+- The Radio page enumerates serial ports (Windows `SERIALCOMM`), refreshes on
+  demand, remembers the last port, and still accepts a typed port.
 
 The GUI therefore shows every record in the codeplug, not just zones and
 channels, and every byte can be edited.
