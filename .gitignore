@@ -13,8 +13,9 @@ CMakeFiles/
 __pycache__/
 *.pyc
 # local/runtime
-imgui.ini
 *.spm
+*.lnk
+ownyourastro.txt
 # large wire captures (analysis artifacts, radio-specific)
 /COM20*.txt
 /depot write test radio.txt

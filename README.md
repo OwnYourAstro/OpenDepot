@@ -20,66 +20,195 @@
 
 # OpenDepot
 
-Clean-room C++ reimplementation of the ASTRO 25 codeplug layer, with a Qt 6
-Widgets GUI. The reusable core and the clean-room serial/PPP/RCMP transport live
-in the separate [`OpenDepotCore`](../OpenDepotCore) repository; this repository
-holds the desktop GUI plus the reverse-engineering notes and tooling. Together
-they read, edit, create and write Motorola ASTRO 25 `.cpg` codeplugs, and
-read/write a connected radio over its serial/PPP programming link — without
-needing the Depot for the read or the codeplug write.
+Clean-room C++ toolchain for the Motorola ASTRO 25 codeplug layer: a Qt 6
+Widgets GUI, a CLI, and an in-tree serial/PPP/RCMP radio transport.
+
+- GUI: <https://github.com/OwnYourAstro/OpenDepot>
+- Core: <https://github.com/OwnYourAstro/OpenDepotCore>
+
+The GUI links the core. The core owns the `.cpg` container, crypto, model and
+FLASHcode data, reporting/doctor/diff, and the native radio transport. It has no
+GUI toolkit dependency and builds on Windows and Linux; the radio serial backend
+is currently Windows-only.
 
 ## Current state
 
-Experimental / alpha. The container layer and radio transport work, but the
-higher-level CPS item model (building zones/channels/personalities/talkgroups
-from scratch) is **not** implemented — creation works by cloning a same-model
-built-in schema and then applying identity and FLASHcode.
+Experimental / alpha. The container layer and the native radio transport work,
+but the higher-level CPS item model (building zones/personalities/talkgroups from
+scratch) is **not** implemented — creation clones a same-model built-in schema
+and then applies identity and FLASHcode.
 
 Working today:
 
-- Decode the `.cpg` OLE2/ADK container (header, encrypted data streams, stream
-  directory) and verify every record against the directory and CRC-16/CCITT.
-- Re-encode into a new OLE2 container (RC4 via the same Windows CSP the vendor
-  uses) so the original Depot and the radio accept it.
+- Decode and verify `.cpg` (portable MS-CFB reader, records, directory, CRC-16/CCITT).
+- Re-encode a compatible container with portable RC4 whose keystream matches the
+  Windows CryptoAPI output byte for byte.
 - Read/edit identity (serial/model), FLASHcode, zone and channel names, and
-  channel frequencies.
+  frequencies; read/set/clear the codeplug passcode record.
 - Read the FLASHcode option map and rebuild a valid FLASHcode from selected
   packages/add-ons (option tables for 13 ASTRO 25 platforms).
-- **Read from a radio** with a native reader (no vendor DLL): identity is read
-  and the radio is returned to normal mode.
-- **Write to a radio** with a standalone raw writer (no Depot, no vendor DLL):
-  the full record set is written, the codeplug is committed, and the written
-  identity is verified by a read-back.
-- **Create a codeplug from a built-in schema** for the models in the built-in
-  model database (see below), with or without a template file.
-- Convert a codeplug to conventional operation, from a template or a reference.
+- **Native radio read** (no vendor DLL): complete tag-based read of the tested
+  model (137 records, all CRC-ok, ~20 s), with a completeness guard.
+- **Native radio write** (no vendor DLL, no Python): full record set, reorg, end
+  (~17 s), identity verified, radio returned to AT mode.
+- **Create a codeplug** from a built-in schema, with or without a template.
+- Convert a codeplug to conventional operation.
+- Qt 6 GUI: Radio Information dashboard, Zones & Channels page, Service Report,
+  Codeplug Doctor, Diff, Records view, and native radio read/write.
+- CLI: inspect, edit, create, report, doctor, diff, copy zones, and radio I/O.
 
 Not implemented:
 
 - Building zones/channels/personalities/talkgroups from scratch.
+- Editable Radio Configuration forms (Radio Wide, Controls, Keypad, Display &
+  Menu) in the GUI — those tree nodes are placeholders for now.
+- Create wizard, FLASHcode editor, and passcode/backup screens in the GUI.
 - Any firmware/boot flash. A radio that failed a firmware flash cannot be
   recovered here.
 
-## What it is used for
+## Requirements
 
-- Inspect and verify an existing `.cpg` (records, CRC, directory, header).
-- Change serial/model, FLASHcode, zone/channel names and frequencies.
-- Generate a codeplug for a supported model and write it to a radio.
-- Back up and restore a codeplug.
-- Recover a radio whose codeplug identity block is damaged, by writing a
-  verified, matching codeplug back.
-- Read, set, or clear the codeplug read/write **passcode** (record
-  `0x00510000`), entirely from the codeplug.
-- Copy a whole zone (channel names, frequencies/selections, per-channel
-  personalities and entries) from one codeplug into a zone of another with
-  `--copy-zone`. `--copy-zones` does several zones at once, and `--trunking`
-  also copies the trunking system records.
+- Windows 10/11 x64 and Visual Studio 2022 (C++ workload).
+- Qt 6.8+ (MSVC 2022 x64).
+- The `OpenDepotCore` checkout as a sibling directory (or set
+  `-DOPENDEPOT_CORE_DIR=<path>`).
+
+## Build
+
+```powershell
+$cm = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
+& $cm -S . -B build\qt -G "Visual Studio 17 2022" -A x64 `
+  -DCMAKE_PREFIX_PATH=C:/Qt/6.8.3/msvc2022_64
+& $cm --build build\qt --config Release
+```
+
+Outputs:
+
+- `build\qt\Release\OpenDepot.exe` — Qt 6 GUI.
+- `build\qt\opendepotcore\Release\opendepot-cli.exe` — console (built by the core subproject).
+
+For a standalone run, deploy the Qt runtime next to the GUI:
+
+```powershell
+& "C:\Qt\6.8.3\msvc2022_64\bin\windeployqt.exe" --release build\qt\Release\OpenDepot.exe
+```
+
+## GUI
+
+Qt 6 Widgets with a custom light theme and the CPS-style tree view.
+
+- **Radio Information** — serial, model, FLASHcode, header version, record count,
+  passcode status, codeplug file, FLASHcode feature chips.
+- **Zones & Channels** — grouped channel table (zone, channel, mode, RX/TX MHz).
+- **Service Report**, **Codeplug Doctor**, **Codeplug Diff**.
+- **Records** — record IDs, partitions, sizes, CRC state.
+- **Radio** — COM port entry, native Read/Write with a busy dialog and a log.
+
+The Radio page uses `opendepot::RadioSession` (in-tree PPP/RCMP), not the vendor
+helper or Python. Writes are validated by the completeness guard and require
+explicit confirmation. The app accepts a codeplug path on the command line.
+
+## CLI
+
+The core builds `opendepot-cli`. The clean-room radio commands are:
+
+```text
+opendepot-cli --read-radio-native <port> <out.cpg>
+opendepot-cli --read-radio-native <port> <template.cpg> <out.cpg>
+opendepot-cli --write-radio-native <port> <in.cpg>
+```
+
+The older commands remain for recovery/compatibility:
+
+```text
+opendepot-cli --read-radio <port> <out.cpg>
+opendepot-cli --read-radio <port> <template.cpg> <out.cpg>
+opendepot-cli --write-radio <port> <in.cpg>
+opendepot-cli --check-write <in.cpg>
+opendepot-cli --verify <in.cpg>
+opendepot-cli --dump <in.cpg>
+opendepot-cli --records <in.cpg>
+opendepot-cli --clone <in.cpg> <out.cpg>
+opendepot-cli --models
+opendepot-cli --zones <in.cpg>
+opendepot-cli --set-zone-name <in.cpg> <out.cpg> <zoneIndex> <name>
+opendepot-cli --set-channel-name <in.cpg> <out.cpg> <zoneIndex> <chanIndex> <name>
+opendepot-cli --set-channel-freq <in.cpg> <out.cpg> <zoneIndex> <chanIndex> <rxMHz> <txMHz>
+opendepot-cli --set-identity <in.cpg> <out.cpg> <serial> <model>
+opendepot-cli --password <in.cpg>
+opendepot-cli --set-password <in.cpg> <out.cpg> <password>
+opendepot-cli --clear-password <in.cpg> <out.cpg>
+opendepot-cli --flashcode <in.cpg> [radio|platform]
+opendepot-cli --set-flashcode <in.cpg> <out.cpg> <flashcode>
+opendepot-cli --flashcode-options <radio|platform>
+opendepot-cli --build-flashcode <radio|platform> <base> <code,code,...>
+opendepot-cli --create <template.cpg> <out.cpg> <serial> <model> <flashcode>
+opendepot-cli --create-new <out.cpg> <model> <serial> [flashcode]
+opendepot-cli --conventional <in.cpg> <out.cpg>
+opendepot-cli --create-conventional <template.cpg> <out.cpg> <serial> <model>
+opendepot-cli --rec <in.cpg> <out.rec>
+opendepot-cli --from-rec <template.cpg> <in.rec> <out.cpg>
+opendepot-cli --taglist <in.cpg> <out.bin>
+opendepot-cli --ishlist <in.cpg> <out.bin>
+opendepot-cli --report <in.cpg> [--json]
+opendepot-cli --radio-report <port> [--json]
+opendepot-cli --doctor <in.cpg> [<out.cpg>]
+opendepot-cli --diff <a.cpg> <b.cpg> [--json]
+opendepot-cli --copy-zone <src.cpg> <srcZone> <dst.cpg> <dstZone> <out.cpg>
+opendepot-cli --copy-zones <src.cpg> <srcZones> <dst.cpg> <dstZones> <out.cpg> [--trunking]
+opendepot-cli --backup-radio <port> <outdir>
+opendepot-cli --erase-radio <port> [--yes-erase]
+opendepot-cli --replace-radio <port> <old.cpg> <new.cpg>
+```
+
+- `--verify` returns 0 when every record verifies, 3 when any record is bad.
+- `--check-write` returns 0 when safe to write, 3 when refused.
+- `--read-radio-native` / `--write-radio-native` use the in-tree transport. The
+  native read has a baked complete request set for `H46UCF9PW6BN`; pass a
+  codeplug as a template to override it for another model.
+- `--read-radio` / `--write-radio` use the legacy helper/Python paths. They
+  remain for recovery until the native path is validated on more models.
+- `--erase-radio` and `--replace-radio` are destructive and gated; they use the
+  legacy vendor helper.
+
+## Radio transport
+
+The core implements the programming link natively:
+
+1. AT modem bringup: `AT&V`, `AT#DATLCL=1`, `AT+IPR=115200`, `CLIENT`.
+2. PPP (LCP/IPCP; host `192.168.128.2`, radio `192.168.128.1`).
+3. TCP to `192.168.128.1:8002`, with sequence-aware receive.
+4. RCMP framing, ISH reads/writes, and the recovered auth challenge/response.
+5. **Reads** use a read-only preamble (`01 06 00`, version/serial, challenge) and
+   end with `01 06 01`; they do **not** send program-mode config or the reorg
+   command. An early version did, and that could rebuild an inconsistent ISH
+   directory.
+6. **Writes** authenticate, enter program mode, write the full record set
+   (identity first, `0x0047` last), reorg, and end.
+7. Every session returns the radio to AT mode (`ATZ` / `AT+IPR=9600`) and
+   force-resets on failure.
+
+The legacy `tools/radio_tcp.py` and `tools/radio_helper.exe` are kept for
+recovery and for `--erase-radio` / `--replace-radio`. `docs/RCMP_INTERNAL.md`
+has the frame details.
+
+## Write safety
+
+- `--check-write` validates identity, record lengths/CRCs, the ISH directory, and
+  the required tag set for a hardware-tested model. An incomplete set is refused
+  with the missing tags.
+- A native write also validates before sending anything, and the GUI requires an
+  explicit confirmation.
+- Always keep a **verified** backup for the exact model/serial, and never force a
+  refused write.
+- Read-back after a write verifies the identity; compare a full native read for
+  every record when you need certainty.
+- See `docs/SAFETY.md` for the failure analysis and preflight rules.
 
 ## Supported models (built-in model database)
 
-A codeplug can be generated without a template for these built-in schemas.
-Only the **800 MHz XTS 2500** has been tested on hardware; the rest are
-untested — treat them as experimental.
+Only the **800 MHz XTS 2500** has been tested on hardware; the rest are untested
+— treat them as experimental.
 
 | Model (example) | Radio | Band | Tested |
 |---|---|---|---|
@@ -94,210 +223,70 @@ untested — treat them as experimental.
 | `H79KDC9PW5AN` | PR 1500 | 800 MHz | no |
 | `H18KCN9PW9AN` | XTS 4000 | 800 MHz | no |
 
-Models are matched by their model number; unrelated variants may share some
-records but have not been validated.
+Models are matched by model number; unrelated variants may share some records
+but have not been validated.
 
 ## Tested hardware
 
 - **One XTS 2500 (Model II), model `H46UCF9PW6BN`, 800 MHz trunking, Host/DSP
   R17.00.02.**
-- No other model has been written to or read from a real radio.
-- Mobile radios are present in the model database for generation only and are
-  **not** validated for the radio read/write path.
+- Native read: 137 records, all CRC-ok, ~20 s. Native write: 137 records, ~17 s,
+  identical read-back, radio back to AT mode.
+- No other model has been read from or written to a real radio.
 
 ## Limitations
 
 - **Codeplug layer only.** No firmware, no boot flash, no repair of a failed
   firmware update.
 - **No from-scratch channel/personality/talkgroup authoring.** Creation clones a
-  built-in or template codeplug, then changes identity/flashcode.
-- **Writes are wholesale.** A write sends the entire record set and commits;
-  a partial/failed write can corrupt the radio.
+  built-in or template codeplug, then changes identity/FLASHcode.
+- **Writes are wholesale.** A write sends the entire record set and commits; a
+  partial/failed write can corrupt the radio.
 - **Reverse-engineered protocol.** The auth and write/commit sequence were
   recovered from observed traffic; a different firmware revision may behave
   differently.
-- **Windows only.** Uses the Windows CryptoAPI for RC4 and a Win32/D3D11 GUI.
+- **Windows-only GUI and serial backend.** The core library is portable; the Qt
+  GUI and the Win32 serial backend are not yet ported.
 - **Untested breadth.** Only one radio model/band has been exercised end to end.
-- **Read-back after write** verifies the identity only, not every record.
-
-## Before you write anything
-
-1. Read the radio/back up first, and keep a **verified** codeplug for the exact
-   model/serial.
-2. Run `--check-write <file>` (or open it in the GUI). If it says `REFUSED`, fix
-   the codeplug — do not force it.
-3. Understand the failure modes: a blank/mismatched identity causes `FAIL 01/92`;
-   a firmware flash failure is **outside** OpenDepot's ability to repair.
-4. See `docs/SAFETY.md` for the incident analysis and the preflight rules.
-
-## Build
-
-Requires Qt 6.8+ (MSVC 2022 x64) and Visual Studio 2022. The core is consumed
-from the sibling `OpenDepotCore` checkout (override with
-`-DOPENDEPOT_CORE_DIR=<path>`).
-
-```powershell
-$cm = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
-& $cm -S . -B build\qt -G "Visual Studio 17 2022" -A x64 `
-  -DCMAKE_PREFIX_PATH=C:/Qt/6.8.3/msvc2022_64
-& $cm --build build\qt --config Release
-```
-
-Outputs:
-
-- `build\qt\Release\OpenDepot.exe` — Qt 6 GUI.
-- `build\qt\opendepotcore\Release\opendepot-cli.exe` — console (built by the core subproject).
-
-The legacy `radio_helper` and `radio_tcp.py` paths remain in `tools/` for
-recovery and reference; the Qt GUI uses the core's native transport directly.
-## CLI
-
-```text
-opendepot-cli --verify <in.cpg>
-opendepot-cli --dump <in.cpg>
-opendepot-cli --records <in.cpg>
-opendepot-cli --clone <in.cpg> <out.cpg>
-opendepot-cli --models
-opendepot-cli --zones <in.cpg>
-opendepot-cli --set-zone-name <in.cpg> <out.cpg> <zoneIndex> <name>
-opendepot-cli --set-channel-name <in.cpg> <out.cpg> <zoneIndex> <chanIndex> <name>
-opendepot-cli --set-channel-freq <in.cpg> <out.cpg> <zoneIndex> <chanIndex> <rxMHz> <txMHz>
-opendepot-cli --set-identity <in.cpg> <out.cpg> <serial> <model>
-opendepot-cli --password <in.cpg>
-opendepot-cli --set-password <in.cpg> <out.cpg> <password>
-opendepot-cli --clear-password <in.cpg> <out.cpg>
-opendepot-cli --radio-password <port>
-opendepot-cli --flashcode <in.cpg> [radio|platform]
-opendepot-cli --set-flashcode <in.cpg> <out.cpg> <flashcode>
-opendepot-cli --flashcode-options <radio|platform>
-opendepot-cli --build-flashcode <radio|platform> <base> <code,code,...>
-opendepot-cli --create <template.cpg> <out.cpg> <serial> <model> <flashcode>
-opendepot-cli --create-new <out.cpg> <model> <serial> [flashcode]
-opendepot-cli --conventional <in.cpg> <out.cpg>
-opendepot-cli --conventional-ref <ref.cpg> <src.cpg> <out.cpg>
-opendepot-cli --create-conventional <template.cpg> <out.cpg> <serial> <model>
-opendepot-cli --rec <in.cpg> <out.rec>
-opendepot-cli --from-rec <template.cpg> <in.rec> <out.cpg>
-opendepot-cli --taglist <in.cpg> <out.bin>
-opendepot-cli --ishlist <in.cpg> <out.bin>
-opendepot-cli --read-radio <port> <out.cpg>
-opendepot-cli --read-radio <port> <template.cpg> <out.cpg>
-opendepot-cli --check-write <in.cpg>
-opendepot-cli --write-radio <port> <in.cpg>
-opendepot-cli --erase-radio <port> [--yes-erase]
-opendepot-cli --replace-radio <port> <old.cpg> <new.cpg>
-opendepot-cli --report <in.cpg> [--json]
-opendepot-cli --radio-report <port> [--json]
-opendepot-cli --doctor <in.cpg> [<out.cpg>]
-opendepot-cli --diff <a.cpg> <b.cpg> [--json]
-opendepot-cli --copy-zone <src.cpg> <srcZone> <dst.cpg> <dstZone> <out.cpg>
-opendepot-cli --copy-zones <src.cpg> <srcZones> <dst.cpg> <dstZones> <out.cpg> [--trunking]
-opendepot-cli --backup-radio <port> <outdir>
-```
-
-- `--verify` returns 0 when every record verifies, 3 when any record is bad.
-- `--check-write` returns 0 when safe to write, 3 when refused.
-- `--read-radio` reads natively; with no template it derives the header basis
-  from a built-in schema and syncs identity from the radio.
-- `--write-radio` validates first, writes the whole record set, commits, then
-  re-reads the identity to verify it.
-- `--erase-radio` and `--replace-radio` are destructive and gated; they use the
-  legacy vendor helper. Do not use them casually.
-
-## GUI
-
-Qt 6 Widgets with a custom dark theme. Pages:
-
-- **Dashboard** — identity, FLASHcode, record count, and a zones/channels table.
-- **Service Report**, **Doctor**, **Diff**.
-- **Radio** — COM port entry, native Read/Write with a busy dialog and a log.
-
-The Radio page uses `opendepot::RadioSession` (in-tree PPP/RCMP), not the vendor
-helper or Python. Writes are checked by the completeness guard and require
-explicit confirmation.
+- **Native read coverage.** The baked request set is complete for
+  `H46UCF9PW6BN`; other models fall back to the built-in template and the guard.
+- **GUI editing is partial.** Configuration pages and the create wizard are not
+  implemented yet.
 
 ## Codeplug passcode
 
-The codeplug read/write passcode is stored as codeplug record **`0x00510000`**
-(partition `0x80`): `payload[0]` = enabled flag, `payload[1..]` = ASCII password,
-zero padded. That is exactly what the vendor `CRcmpBundler::GetRadioPassword`
-reads (a read of partition `0x80` / tag `0x51` / instance `0`). OpenDepot reads
-and edits the record directly from the codeplug; no vendor DLL is involved.
+The passcode is codeplug record `0x00510000` (partition `0x80`): `payload[0]` =
+enabled, `payload[1..]` = ASCII password, zero padded. The CLI reads and edits it
+directly from the codeplug:
 
-- `--password <in.cpg>` — show the enabled flag and passcode.
-- `--set-password <in.cpg> <out.cpg> <password>` — set it.
-- `--clear-password <in.cpg> <out.cpg>` — clear it.
-- `--radio-password <port>` — native read of the radio's passcode (does a full
-  read and parses record `0x00510000`).
-- GUI: **Radio → Read Passcode from Radio / Set Passcode… / Clear Passcode**.
+- `--password <in.cpg>`
+- `--set-password <in.cpg> <out.cpg> <password>`
+- `--clear-password <in.cpg> <out.cpg>`
 
-Set/clear only changes the codeplug; **Save As** or **Write to Radio** applies
-it. Whether a radio with a passcode set still allows this native read is
-untested; if it blocks the read, recovery needs a codeplug that was read while
-the radio was unlocked.
-
-## Memory / calibration backup (read-only)
-
-`opendepot-cli --backup-radio <port> <outdir>` (GUI: **Radio → Backup
-(memory/calibration)…**) creates a folder with:
-
-- `codeplug.cpg` — native, CRC-verified read of the codeplug.
-- `softpots.bin` — tuning softpot values, read via the vendor API (read-only).
-- `info.txt` — processor type, version attempt, ESN attempt, security-partition
-  attempt, and the softpot dump.
-- `security.bin` — security/calibration partition, when the API returns it.
-- `manifest.json` — SHA-256 and size of each artifact.
-
-It is read-only and never writes to the radio. Known limitations: outside the
-Depot the security-partition calls (`GetSecurityPartitionSize/Data`) currently
-fail with "Class not registered", and firmware/flash memory is not dumped yet
-(the address map and boot-mode access are still being worked out). The codeplug
-and softpot tuning values are captured.
+Set/clear only changes the codeplug; save or write applies it. Whether a radio
+with a passcode set still allows a native read is untested.
 
 ## Service report, doctor, diff
 
-Read-only analysis tools (CLI):
+CLI:
 
-- `--report <in.cpg> [--json]` — model, serial, FLASHcode + decoded features,
-  passcode status, zone/channel summary and record counts.
-- `--radio-report <port> [--json]` — native read of the radio; includes the
-  `AT&V` banner and `HOST`/`SERIAL` from the handshake (Host/DSP).
-- `--doctor <in.cpg> [<out.cpg>]` — checks the header checksum, directory
-  checksum, per-record length/CRC and identity. With an output path it repairs
-  them, re-syncs identity and writes a fixed codeplug; exit 3 if unhealthy.
-- `--diff <a.cpg> <b.cpg> [--json]` — identity, FLASHcode, records by tag
-  (added/removed/changed) and zone/channel differences.
+- `--report <in.cpg> [--json]` — identity, FLASHcode and features, passcode,
+  zones/channels, record counts.
+- `--radio-report <port> [--json]` — native read plus the `AT&V` banner.
+- `--doctor <in.cpg> [<out.cpg>]` — header/directory/record checks; optional repair.
+- `--diff <a.cpg> <b.cpg> [--json]` — identity, FLASHcode, records, zones.
 
-GUI: **Tools → Service Report… / Codeplug Doctor… / Repair checksums/identity /
-Diff with file…**. These work on the open codeplug or, when none is loaded, on a
-`.cpg` you pick.
+The Qt GUI exposes the same report, doctor, and diff views.
 
-## Radio recovery (FAIL 01/92)
+## Backup and recovery
 
-If a radio's identity block is blank it cannot be read normally, so the tools
-are not reachable by reading it. Recovery uses a **verified backup** for that
-exact model: **Radio → Recover from backup (write)…**. It validates the backup,
-skips the pre-write read (which would fail on a dead radio), writes the full
-record set, and verifies the identity afterwards. Always keep the backup.
-
-## Radio transport (recovered)
-
-Programming is exposed by the radio as an AT modem, then PPP, then RCMP:
-
-1. Open the port **9600 8N1 with RTS/CTS**; send `AT&V` — the radio reports
-   `CARRIER`, `PROTOCOL:ALT`, IP `192.168.128.1`.
-2. Send `AT#DATLCL=1`, then `AT+IPR=115200`; the port switches to 115200.
-3. Send `CLIENT`; the radio replies `CLIENTSERVER`.
-4. PPP (LCP/IPCP; host `192.168.128.2`, radio `192.168.128.1`).
-5. RCMP over PPP: read `0x07`, write `0x10`, ISH items
-   `tag/instance/partition/length/payload`, with the recovered authentication
-   challenge/response.
-6. Write sequence: begin, authenticate, enter program mode, write all records
-   (identity first, directory last), commit (reorg), end.
-
-Read uses the native reader; write uses the raw writer. `NextGen10.dll` /
-`radio_helper.exe` are only used by `--erase-radio` / `--replace-radio`.
-`docs/RCMP_INTERNAL.md` has the frame details.
+- `--backup-radio <port> <outdir>` writes `codeplug.cpg`, `softpots.bin`,
+  `info.txt`, `security.bin` (when available), and a `manifest.json` with SHA-256
+  hashes. It is read-only and never writes to the radio.
+- To recover a radio with a damaged identity/directory, write a **verified
+  complete** codeplug for the exact model/serial:
+  `--write-radio-native <port> <known-good.cpg>` (or the legacy `--write-radio`).
+- The completeness guard refuses a set that is missing required tags.
 
 ## Layout
 
@@ -306,8 +295,9 @@ Read uses the native reader; write uses the raw writer. `NextGen10.dll` /
 - `tools/radio_helper.cs` — legacy 32-bit vendor-driver helper (erase/replace)
 - `tools/gen_model_db.py`, `tools/gen_flashcode_db.py` — data generators
 - `docs/` — container, protocol, safety, and feature notes
-- The codeplug container, crypto, model/FLASHcode data, and native radio
-  transport live in `../OpenDepotCore`.
+- The container, crypto, model/FLASHcode data, and native radio transport live in
+  [`OpenDepotCore`](https://github.com/OwnYourAstro/OpenDepotCore).
+
 ## Disclaimer and license
 
 - **No affiliation.** OpenDepot is an independent project. It is not affiliated
@@ -315,7 +305,7 @@ Read uses the native reader; write uses the raw writer. `NextGen10.dll` /
 - **No warranty.** The software is provided "as is", without warranty of any
   kind, express or implied. The authors are not liable for any damage to radios,
   data, or equipment. You use it entirely at your own risk.
-- **Clean room.** The container, generator and CRC logic are original. Radio I/O
-  uses the Windows CryptoAPI and the recovered protocol; the optional
-  erase/replace helper uses the vendor driver already installed on the machine.
-- See `LICENSE` for the license terms.
+- **Clean room.** The container, crypto, generators, GUI, and native transport
+  are original. The optional erase/replace helper uses the vendor driver already
+  installed on the machine.
+- See `LICENSE` for the license terms (MIT).
