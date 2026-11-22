@@ -813,6 +813,39 @@ QWidget* MainWindow::buildRadioWidePage() {
             addSpin("Alert Tone Volume Offset:", "Alert Tone Volume Offset", 255);
             addSpin("Fixed Alert Tone Volume Setting:", "Fixed Alert Tone Volume Setting", 255);
             wl->addLayout(form);
+        } else if (QString::fromLatin1(generalTabs[i]) == "Alarm") {
+            auto* form = new QGridLayout;
+            form->setHorizontalSpacing(18);
+            form->setVerticalSpacing(8);
+            int row = 0;
+            auto addCheck = [&](const char* field) {
+                auto* check = new QCheckBox(QString::fromLatin1(field));
+                form->addWidget(check, row++, 0, 1, 2);
+                bindField(field, check);
+            };
+            auto addSpin = [&](const char* label, const char* field, int maximum) {
+                form->addWidget(new QLabel(QString::fromLatin1(label)), row, 0);
+                auto* spin = new QSpinBox;
+                spin->setRange(0, maximum);
+                form->addWidget(spin, row++, 1);
+                bindField(field, spin);
+            };
+            auto addCombo = [&](const char* label, const char* field) {
+                form->addWidget(new QLabel(QString::fromLatin1(label)), row, 0);
+                auto* combo = new QComboBox;
+                form->addWidget(combo, row++, 1);
+                bindField(field, combo);
+            };
+            addCheck("Silent Alarm");
+            addCheck("Emergency Call De-key Sidetone");
+            addCombo("Emergency Alarm Indicator:", "Emergency Alarm Receive Indicator Type");
+            addCombo("Emergency Alert Tone Set:", "Emergency Rx/Tx Alert Tone Set");
+            addSpin("Audible Emergency Beacon:", "Audible Emergency Beacon", 255);
+            addSpin("Emergency Alarm Display Time:", "Emergency Alarm Receive Display Time", 255);
+            addSpin("Emergency Alarm Retry Ignore Time:", "Emergency Alarm Receive Retry Ignore Time",
+                    255);
+            addSpin("Emergency Alarm Retry Rate:", "Emergency Alarm Retry Rate", 255);
+            wl->addLayout(form);
         } else if (QString::fromLatin1(generalTabs[i]) == "Home Mode") {
             auto* form = new QGridLayout;
             form->setHorizontalSpacing(18);
