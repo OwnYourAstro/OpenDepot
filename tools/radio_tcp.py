@@ -157,6 +157,7 @@ class Link:
     def __init__(self, port, baud=115200):
         self.s = serial.Serial(port, baud, rtscts=True, timeout=0.2)
         self.ip_id = 1
+        self._frame_buf = bytearray()
 
     def send_ctrl(self, code, ident, options=b""):
         self.s.write(frame(0x8021 if code in (3, 4) else 0x8021, bytes([code, ident]) + options, pfc=False))
@@ -166,22 +167,24 @@ class Link:
         self.s.write(frame(0x21, pkt, pfc=True, addr=False))
 
     def read_frames(self, t):
-        end = time.time() + t; buf = bytearray(); out = []
+        end = time.time() + t; out = []
         while time.time() < end:
             n = self.s.in_waiting
             if n:
-                buf += self.s.read(n)
+                self._frame_buf += self.s.read(n)
                 while True:
-                    i = buf.find(b"\x7e")
+                    i = self._frame_buf.find(b"\x7e")
                     if i < 0:
                         break
-                    j = buf.find(b"\x7e", i + 1)
+                    j = self._frame_buf.find(b"\x7e", i + 1)
                     if j < 0:
                         break
-                    raw = bytes(buf[i + 1:j]); del buf[:j + 1]
+                    raw = bytes(self._frame_buf[i + 1:j]); del self._frame_buf[:j + 1]
                     out.append(unesc(raw))
+                if out:
+                    return out
             else:
-                time.sleep(0.01)
+                time.sleep(0.005)
         return out
 
 def parse_opts(b):
@@ -359,7 +362,7 @@ def main():
         nonlocal their_seq
         end = time.time() + dur
         while time.time() < end:
-            for f in link.read_frames(0.3):
+            for f in link.read_frames(0.01):
                 if len(f) >= 2 and f[0] == 0xFF:
                     handle_link(f, link, 1, seen); continue
                 ip = parse_ipv4(f)
@@ -417,7 +420,7 @@ def main():
                     m = bytes(rxbuf[2:2 + L]); del rxbuf[:2 + L]; return m
             if time.time() > end:
                 return None
-            pump_tcp(0.3)
+            pump_tcp(0.01)
 
     def send_raw(hx):
         nonlocal my_seq
@@ -521,8 +524,6 @@ def main():
             part = 0x0081 if (sid >> 16) in (0x1004, 0x1005, 0x1006) else 0x0080
             tag = sid >> 16
             inst = sid & 0xFFFF
-            q = bytes([0x01, 0x02, part]) + tag.to_bytes(2, 'big') + bytes([0x00, 0x00, 0x00, 0x01])
-            req(q, 3.0)
             ln = len(data)
             body = (bytearray([0x01, 0x01, part]) + tag.to_bytes(2, 'big') +
                     inst.to_bytes(2, 'big') + ln.to_bytes(2, 'big') + ln.to_bytes(4, 'big') + data)

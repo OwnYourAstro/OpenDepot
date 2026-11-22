@@ -150,3 +150,31 @@ opendepot-cli --write-radio COM20 updated.cpg
   → `OK: safe to write (identity REDACTED/H46UCF9PW6BN, 447 records)`.
 - `--check-write %TEMP%\opendepot-gui\gui-read.cpg`
   → `REFUSED: missing identity record 0x10040000 ... FAIL 01/92` (exit 3).
+
+## 7. Second incident: incomplete radio read, and the tag-coverage guard
+
+A `--read-radio` capture returned **96 records**, but the complete schema for
+this radio is **137 records / 96 distinct tags**. Writing the 96-record read
+left the radio unprogrammed; the post-write read had only 94 records and the
+`0x0FA1` 0/1 chain entries were gone. The read was missing tags `0x0016`,
+`0x0FFD`, and `0x0FFF`. At the time, `--check-write` validated only identity and
+CRCs, so the incomplete set passed.
+
+`ValidateRadioCodeplug` now requires every tag present in a validated complete
+set for a hardware-tested model. For `H46UCF9PW6BN` that is the 96-tag table in
+`src/adk.cpp`; other models still get identity/CRC/directory checks but not the
+tag floor until they are validated. The bad read is now refused:
+
+```
+REFUSED: codeplug is missing required tag(s) 0x0016, 0x0FFD, 0x0FFF; ...
+```
+
+Restore used a complete 137-record codeplug. The write path also had a transport
+bug: `read_frames` kept its PPP frame buffer local, so short poll windows
+discarded partial frames and produced `RX OOO` drops. The buffer is now
+persistent and the redundant per-record query was removed; the 137-record
+restore completed with 0 out-of-order frames and the normal reorg/end sequence.
+
+Remaining risk: the fixed read-request list can still miss records. A full
+directory read (M4) is required before a radio-read codeplug can be trusted as a
+write source.
