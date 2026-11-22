@@ -559,6 +559,8 @@ class RadioHelper {
                     System.Threading.Thread.Sleep(60);
                 }
                 Console.WriteLine("empty tags: " + empty);
+                try { s.B.ResetRadio(); Console.WriteLine("ResetRadio ok"); }
+                catch (Exception e) { Console.WriteLine("ResetRadio EX " + e.Message); }
             }
         }
         Console.WriteLine("wrote " + outPath + " records=" + got.Count);
