@@ -13,6 +13,7 @@
 
 #include <QAction>
 #include <QAbstractItemView>
+#include <QButtonGroup>
 #include <QApplication>
 #include <QCheckBox>
 #include <QColor>
@@ -598,7 +599,27 @@ QWidget* MainWindow::buildRadioWidePage() {
     banner->setWordWrap(true);
     lay->addWidget(banner);
 
-    auto* tabs = new QTabWidget;
+    auto* stack = new QStackedWidget;
+    auto* tabBar = new QWidget;
+    auto* tabGrid = new QGridLayout(tabBar);
+    tabGrid->setContentsMargins(0, 0, 0, 6);
+    tabGrid->setSpacing(0);
+    auto* tabGroup = new QButtonGroup(page);
+    tabGroup->setExclusive(true);
+    int nextPage = 0;
+    auto addPage = [&](const QString& name, QWidget* w, int row, int col) {
+        stack->addWidget(w);
+        auto* btn = new QPushButton(name);
+        btn->setObjectName("cpsTab");
+        btn->setCheckable(true);
+        btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        tabGroup->addButton(btn);
+        const int idx = nextPage++;
+        connect(btn, &QPushButton::clicked, this, [stack, idx] { stack->setCurrentIndex(idx); });
+        tabGrid->addWidget(btn, row, col);
+        return btn;
+    };
+
     auto* scroll = new QScrollArea;
     scroll->setWidgetResizable(true);
     scroll->setFrameShape(QFrame::NoFrame);
@@ -715,21 +736,40 @@ QWidget* MainWindow::buildRadioWidePage() {
 
     cl->addStretch(1);
     scroll->setWidget(content);
-    tabs->addTab(scroll, "General");
-    for (const char* name : {"Emergency", "TPS", "Alert Tones", "Time-Out Timers", "Alarm",
-                             "Home Mode", "Tx Audio Control Per Mode", "Digital Audio Options",
-                             "PA/Siren", "Advanced", "Advanced II", "VRS/DVRS", "VRS Private Line",
-                             "VRS Advanced", "VRS Personality", "Rx Audio Control", "Data",
-                             "Labtool", "Control Head"}) {
+
+    auto* generalButton = addPage("General", scroll, 3, 0);
+    const char* generalTabs[] = {"Emergency", "TPS", "Alert Tones", "Time-Out Timers", "Alarm",
+                                 "Home Mode"};
+    for (int i = 0; i < 6; ++i) {
         auto* w = new QWidget;
         auto* wl = new QVBoxLayout(w);
         auto* lbl = new QLabel("This page is not decoded yet.");
         lbl->setObjectName("muted");
         wl->addWidget(lbl);
         wl->addStretch(1);
-        tabs->addTab(w, QString::fromLatin1(name));
+        addPage(QString::fromLatin1(generalTabs[i]), w, 3, i + 1);
     }
-    lay->addWidget(tabs, 1);
+    const char* rows[3][5] = {
+        {"Tx Audio Control Per Mode", "Digital Audio Options", "PA/Siren", "Advanced", nullptr},
+        {"Advanced II", "VRS/DVRS", "VRS Private Line", "VRS Advanced", nullptr},
+        {"VRS Personality", "Rx Audio Control", "Data", "Labtool", "Control Head"},
+    };
+    for (int row = 0; row < 3; ++row) {
+        for (int col = 0; col < 5 && rows[row][col]; ++col) {
+            auto* w = new QWidget;
+            auto* wl = new QVBoxLayout(w);
+            auto* lbl = new QLabel("This page is not decoded yet.");
+            lbl->setObjectName("muted");
+            wl->addWidget(lbl);
+            wl->addStretch(1);
+            addPage(QString::fromLatin1(rows[row][col]), w, row, col);
+        }
+    }
+    for (int col = 0; col < 7; ++col) tabGrid->setColumnStretch(col, 1);
+    stack->setCurrentIndex(0);
+    generalButton->setChecked(true);
+    lay->addWidget(tabBar, 0);
+    lay->addWidget(stack, 1);
 
     auto* raw = new QPushButton("Raw Radio Wide records");
     connect(raw, &QPushButton::clicked, this, [this] {

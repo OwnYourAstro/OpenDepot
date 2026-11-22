@@ -54,3 +54,7 @@ QScrollBar::add-line, QScrollBar::sub-line { height: 0; }
 QStatusBar { background: #ffffff; border-top: 1px solid #e5e9f0; color: #64748b; }
 QProgressBar { border: 1px solid #dfe5ee; border-radius: 6px; text-align: center; }
 QProgressBar::chunk { background: #2563eb; }
+
+QPushButton#cpsTab { border: 1px solid #b8c4d6; border-right: none; border-radius: 0; background: #eef2f7; padding: 5px 10px; color: #1f2937; }
+QPushButton#cpsTab:hover { background: #e3e9f2; }
+QPushButton#cpsTab:checked { background: #2563eb; color: #ffffff; border-color: #2563eb; }
