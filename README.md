@@ -20,16 +20,22 @@
 
 # OpenDepot
 
-Clean-room C++ toolchain for the Motorola ASTRO 25 codeplug layer: a Qt 6
-Widgets GUI, a CLI, and an in-tree serial/PPP/RCMP radio transport.
+Modern desktop codeplug editor and radio programmer for Motorola ASTRO 25
+radios. It reads, edits, creates, verifies and writes `.cpg` codeplugs, and
+reads and writes a connected radio over its serial/PPP programming link without
+needing the Depot.
 
-- GUI: <https://github.com/OwnYourAstro/OpenDepot>
-- Core: <https://github.com/OwnYourAstro/OpenDepotCore>
+The project is split into two repositories:
 
-The GUI links the core. The core owns the `.cpg` container, crypto, model and
-FLASHcode data, reporting/doctor/diff, and the native radio transport. It has no
-GUI toolkit dependency and builds on Windows and Linux; the radio serial backend
-is currently Windows-only.
+- **OpenDepot** (this repository) — the Qt 6 Widgets desktop app, plus the
+  reverse-engineering notes and tooling.
+- **OpenDepotCore** — the portable engine: `.cpg` container, crypto, model and
+  FLASHcode data, reporting/doctor/diff, and the native radio transport. The GUI
+  links it.
+
+The GUI is a modern take on the ASTRO 25 CPS/Depot layout: a tree view, a
+card-based Radio Information screen, FLASHcode feature chips, and first-class
+radio read/write.
 
 ## Current state
 
