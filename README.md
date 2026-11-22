@@ -39,10 +39,13 @@ radio read/write.
 
 ## Current state
 
-Experimental / alpha. The container layer and the native radio transport work,
-but the higher-level CPS item model (building zones/personalities/talkgroups from
-scratch) is **not** implemented — creation clones a same-model built-in schema
-and then applies identity and FLASHcode.
+Experimental / alpha. The container layer, native radio transport, and a
+CPS-style object model now work. The model represents **every record** and maps
+it to the CPS section tree (149 tags across 29 radio backups plus 4 fixtures,
+with 0 unmapped records), and zone/channel fields are editable. Building
+zones/personalities/talkgroups from scratch and field-level decoding of some
+radio-wide/personality/trunking payloads are still in progress; creation clones
+a same-model built-in schema and then applies identity and FLASHcode.
 
 Working today:
 
@@ -61,13 +64,21 @@ Working today:
 - Convert a codeplug to conventional operation.
 - Qt 6 GUI: Radio Information dashboard, Zones & Channels page, Service Report,
   Codeplug Doctor, Diff, Records view, and native radio read/write.
-- CLI: inspect, edit, create, report, doctor, diff, copy zones, and radio I/O.
+- CPS object model in the core: every record decoded into a section tree, with
+  typed zone/channel setters, alias/list/scan views, reference decoding, and raw
+  record editing.
+- CLI: inspect, edit, create, report, doctor, diff, copy zones, dump the model
+  (`--model`, `--schema`) and raw records (`--hex`, `--hexall`), and radio I/O.
 
 Not implemented:
 
-- Building zones/channels/personalities/talkgroups from scratch.
+- Building zones/channels/personalities/talkgroups from scratch (the record set
+  is fixed by the ISH directory).
 - Editable Radio Configuration forms (Radio Wide, Controls, Keypad, Display &
-  Menu) in the GUI — those tree nodes are placeholders for now.
+  Menu) in the GUI — the core exposes the records, but those tree nodes are
+  still placeholders.
+- Field-level names for every radio-wide/personality/trunking byte; see
+  `docs/CPS_MODEL.md` and `docs/CODEPLUG_TAGS.md`.
 - Create wizard, FLASHcode editor, and passcode/backup screens in the GUI.
 - Any firmware/boot flash. A radio that failed a firmware flash cannot be
   recovered here.
