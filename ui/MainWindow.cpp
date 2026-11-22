@@ -1778,6 +1778,7 @@ QWidget* MainWindow::buildSectionPage() {
     sectionNamed_->setEditTriggers(QAbstractItemView::NoEditTriggers);
     sectionNamed_->setShowGrid(false);
     tabs->addTab(sectionNamed_, "Named fields");
+    tabs->setCurrentWidget(sectionNamed_);
 
     auto* hexWrap = new QWidget;
     auto* hexLay = new QVBoxLayout(hexWrap);
