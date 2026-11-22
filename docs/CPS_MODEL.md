@@ -156,6 +156,22 @@ model.Save("radio-edited.cpg", err);  // CRCs + directory recomputed
 prints every decoded node as JSON, and `--schema` prints the tag/section
 catalog for one codeplug.
 
+## GUI
+
+The Qt app builds its tree directly from `CodeplugModel::Sections()`:
+
+- **Zone Channel Assignment** opens the grouped channel table and an editor for
+  zone name, channel name, RX/TX MHz, and RX/TX squelch.
+- **Radio Information** keeps the dashboard.
+- Every other section opens the record explorer: a table of the section's
+  records (ID, tag, instance, size, family/name), decoded references and
+  strings, an editable name table (for `name_table` and single-`name` records),
+  and a hex payload editor (`SetRecordPayload`).
+- **File > Save** writes the edited codeplug in place; **Save As** writes a copy.
+
+The GUI therefore shows every record in the codeplug, not just zones and
+channels, and every byte can be edited.
+
 ## Open questions
 
 - Semantics of channel entry bytes `4..11`, `28..33`, `34`.

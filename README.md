@@ -112,18 +112,26 @@ For a standalone run, deploy the Qt runtime next to the GUI:
 
 ## GUI
 
-Qt 6 Widgets with a custom light theme and the CPS-style tree view.
+Qt 6 Widgets with a custom light theme and a tree generated from the core's
+CPS model.
 
-- **Radio Information** — serial, model, FLASHcode, header version, record count,
+- **Radio Information** - serial, model, FLASHcode, header version, record count,
   passcode status, codeplug file, FLASHcode feature chips.
-- **Zones & Channels** — grouped channel table (zone, channel, mode, RX/TX MHz).
-- **Service Report**, **Codeplug Doctor**, **Codeplug Diff**.
-- **Records** — record IDs, partitions, sizes, CRC state.
-- **Radio** — COM port entry, native Read/Write with a busy dialog and a log.
+- **Zone Channel Assignment** - grouped channel table plus an editor for zone and
+  channel names, RX/TX MHz, and RX/TX squelch.
+- **Every other section** - Radio Wide, Controls, Display & Menu, Phone, Secure,
+  Trunking, Conventional Personality, aliases, MPL, MDC, DTMF, ASTRO Systems,
+  Scan, Expert - opens a record explorer. It lists the section's records with
+  tag/instance/size/family, resolves references and strings, edits name tables,
+  and edits any record payload as hex.
+- **Service Report**, **Codeplug Doctor**, **Codeplug Diff**, **Records**.
+- **Radio** - COM port entry, native Read/Write with a busy dialog and a log.
 
-The Radio page uses `opendepot::RadioSession` (in-tree PPP/RCMP), not the vendor
-helper or Python. Writes are validated by the completeness guard and require
-explicit confirmation. The app accepts a codeplug path on the command line.
+Edits update the in-memory codeplug and are written with **File > Save** (or
+Save As). The Radio page uses `opendepot::RadioSession` (in-tree PPP/RCMP), not
+the vendor helper or Python. Writes are validated by the completeness guard and
+require explicit confirmation. The app accepts a codeplug path on the command
+line.
 
 ## CLI
 
@@ -267,8 +275,8 @@ but have not been validated.
 - **Untested breadth.** Only one radio model/band has been exercised end to end.
 - **Native read coverage.** The baked request set is complete for
   `H46UCF9PW6BN`; other models fall back to the built-in template and the guard.
-- **GUI editing is partial.** Configuration pages and the create wizard are not
-  implemented yet.
+- **GUI editing is partial.** Radio-wide configuration forms and the create
+  wizard are not implemented; those sections expose records and raw payloads.
 
 ## Codeplug passcode
 

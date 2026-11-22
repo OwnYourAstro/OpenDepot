@@ -12,6 +12,7 @@
 #include <thread>
 
 #include "opendepot/core/adk.h"
+#include "opendepot/core/model.h"
 
 class QAction;
 class QGridLayout;
@@ -19,6 +20,7 @@ class QLabel;
 class QLineEdit;
 class QPlainTextEdit;
 class QProgressDialog;
+class QPushButton;
 class QScrollArea;
 class QStackedWidget;
 class QTableWidget;
@@ -50,6 +52,7 @@ public:
 
 private slots:
     void openCodeplug();
+    void saveCodeplug();
     void saveCodeplugAs();
     void generateReport();
     void runDoctor();
@@ -65,8 +68,21 @@ private:
     void setupMenu();
     void setupUi();
     void buildTree();
+    void buildModelTree();
+    void navigateTreeItem(QTreeWidgetItem* item);
+    void showSection(int index);
+    void refreshSectionList();
+    void refreshSectionRecord(int row);
+    void applySectionPayload();
+    void applySectionNames();
+    void applyChannelEdit();
+    void refreshAfterEdit();
+    void refreshZones();
+    void selectChannelRow(int zone, int channel);
+    const opendepot::RecordNode* findNode(uint32_t id) const;
     QWidget* buildRadioInfoPage();
     QWidget* buildZonesPage();
+    QWidget* buildSectionPage();
     QWidget* buildTextPage(const QString& title, QPlainTextEdit** out, const QString& button,
                            void (MainWindow::*handler)());
     QWidget* buildRadioPage();
@@ -80,7 +96,9 @@ private:
     void appendRadioLog(const QString& line);
 
     opendepot::Codeplug cp_;
+    std::unique_ptr<opendepot::CodeplugModel> model_;
     bool have_ = false;
+    bool dirty_ = false;
     QString path_;
     QDateTime openedAt_;
 
@@ -91,7 +109,7 @@ private:
     QScrollArea* infoScroll_ = nullptr;
     QLabel* subtitle_ = nullptr;
     QLabel* serial_ = nullptr;
-    QLabel* model_ = nullptr;
+    QLabel* modelLabel_ = nullptr;
     QLabel* flashcode_ = nullptr;
     QLabel* headerVersion_ = nullptr;
     QLabel* recordCount_ = nullptr;
@@ -101,6 +119,25 @@ private:
     QWidget* chips_ = nullptr;
     QGridLayout* chipsLayout_ = nullptr;
     QTableWidget* zones_ = nullptr;
+    QLineEdit* zoneNameEdit_ = nullptr;
+    QLineEdit* channelNameEdit_ = nullptr;
+    QLineEdit* rxEdit_ = nullptr;
+    QLineEdit* txEdit_ = nullptr;
+    QLineEdit* rxSqEdit_ = nullptr;
+    QLineEdit* txSqEdit_ = nullptr;
+    int editZone_ = -1;
+    int editChannel_ = -1;
+
+    int sectionIndex_ = -1;
+    QLabel* sectionTitle_ = nullptr;
+    QLabel* sectionSubtitle_ = nullptr;
+    QTableWidget* sectionRecords_ = nullptr;
+    QPlainTextEdit* sectionDetail_ = nullptr;
+    QPlainTextEdit* sectionHex_ = nullptr;
+    QTableWidget* sectionNames_ = nullptr;
+    QLineEdit* sectionNameEdit_ = nullptr;
+    QPushButton* sectionApplyNames_ = nullptr;
+
     QPlainTextEdit* report_ = nullptr;
     QPlainTextEdit* doctor_ = nullptr;
     QPlainTextEdit* diff_ = nullptr;

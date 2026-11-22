@@ -15,6 +15,7 @@
 #include <QFrame>
 #include <QGridLayout>
 #include <QHBoxLayout>
+#include <QHash>
 #include <QHeaderView>
 #include <QKeySequence>
 #include <QLabel>
@@ -25,6 +26,7 @@
 #include <QProgressDialog>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QSignalBlocker>
 #include <QStackedWidget>
 #include <QStatusBar>
 #include <QStyle>
@@ -38,6 +40,7 @@
 #include <filesystem>
 #include <vector>
 
+#include "opendepot/core/model.h"
 #include "opendepot/core/radio.h"
 
 namespace {
@@ -47,6 +50,52 @@ constexpr int kReportPage = 2;
 constexpr int kDoctorPage = 3;
 constexpr int kDiffPage = 4;
 constexpr int kRadioPage = 5;
+constexpr int kSectionPage = 6;
+constexpr int kRolePage = Qt::UserRole;
+constexpr int kRoleSection = Qt::UserRole + 1;
+constexpr int kRoleZone = Qt::UserRole + 2;
+constexpr int kRoleChannel = Qt::UserRole + 3;
+constexpr int kRoleRecordId = Qt::UserRole + 4;
+
+QString HexBytes(const std::vector<uint8_t>& p) {
+    QString s;
+    s.reserve(int(p.size()) * 3);
+    for (size_t i = 0; i < p.size(); ++i) {
+        if (i) s += ' ';
+        s += QString("%1").arg(p[i], 2, 16, QChar('0')).toUpper();
+    }
+    return s;
+}
+
+bool ParseHex(const QString& text, std::vector<uint8_t>& out) {
+    out.clear();
+    QString clean;
+    for (QChar c : text)
+        if (!c.isSpace()) clean += c;
+    if (clean.size() % 2) return false;
+    for (int i = 0; i < clean.size(); i += 2) {
+        bool ok = false;
+        const int v = clean.mid(i, 2).toInt(&ok, 16);
+        if (!ok || v < 0 || v > 255) return false;
+        out.push_back(uint8_t(v));
+    }
+    return true;
+}
+
+uint16_t Be16(const std::vector<uint8_t>& p, size_t off) {
+    if (off + 1 >= p.size()) return 0;
+    return uint16_t((p[off] << 8) | p[off + 1]);
+}
+
+void PutName(std::vector<uint8_t>& p, size_t off, size_t width, const QString& name) {
+    if (width == 0 || off + width > p.size()) return;
+    std::fill(p.begin() + static_cast<std::ptrdiff_t>(off),
+              p.begin() + static_cast<std::ptrdiff_t>(off + width), 0);
+    const QByteArray bytes = name.toUtf8();
+    const size_t n = std::min<size_t>(size_t(bytes.size()), width - 1);
+    std::copy(bytes.begin(), bytes.begin() + static_cast<std::ptrdiff_t>(n),
+              p.begin() + static_cast<std::ptrdiff_t>(off));
+}
 }  // namespace
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
@@ -69,6 +118,10 @@ void MainWindow::setupMenu() {
     auto* open = file->addAction("&Open Codeplug...");
     open->setShortcut(QKeySequence::Open);
     connect(open, &QAction::triggered, this, &MainWindow::openCodeplug);
+
+    auto* save = file->addAction("&Save");
+    save->setShortcut(QKeySequence::Save);
+    connect(save, &QAction::triggered, this, &MainWindow::saveCodeplug);
 
     saveAct_ = file->addAction("Save &As...");
     saveAct_->setShortcut(QKeySequence::SaveAs);
@@ -111,7 +164,7 @@ void MainWindow::setupMenu() {
     };
     add(QStyle::SP_DialogOpenButton, "Open", &MainWindow::openCodeplug);
     auto* saveBtn = bar->addAction(style()->standardIcon(QStyle::SP_DialogSaveButton), "Save");
-    connect(saveBtn, &QAction::triggered, this, &MainWindow::saveCodeplugAs);
+    connect(saveBtn, &QAction::triggered, this, &MainWindow::saveCodeplug);
     bar->addSeparator();
     add(QStyle::SP_ArrowDown, "Read Radio", &MainWindow::readRadio);
     add(QStyle::SP_ArrowUp, "Write Radio", &MainWindow::writeRadio);
@@ -164,6 +217,7 @@ void MainWindow::setupUi() {
     pages_->addWidget(buildTextPage("Codeplug Diff", &diff_, "Compare with codeplug...",
                                     &MainWindow::compareCodeplug));
     pages_->addWidget(buildRadioPage());
+    pages_->addWidget(buildSectionPage());
     pages_->setCurrentIndex(kInfoPage);
     root->addWidget(pages_, 1);
 
@@ -178,42 +232,13 @@ void MainWindow::buildTree() {
     tree_->setIndentation(16);
     tree_->setIconSize(QSize(16, 16));
 
-    auto icon = [this](QStyle::StandardPixmap p) { return style()->standardIcon(p); };
-
     treeRoot_ = new QTreeWidgetItem(tree_, QStringList{"No codeplug"});
-    treeRoot_->setIcon(0, icon(QStyle::SP_ComputerIcon));
-    treeRoot_->setData(0, Qt::UserRole, kInfoPage);
-
-    auto* info = new QTreeWidgetItem(treeRoot_, QStringList{"Radio Information"});
-    info->setIcon(0, icon(QStyle::SP_MessageBoxInformation));
-    info->setData(0, Qt::UserRole, kInfoPage);
-
-    auto* config = new QTreeWidgetItem(treeRoot_, QStringList{"Radio Configuration"});
-    config->setIcon(0, icon(QStyle::SP_DirIcon));
-    config->setData(0, Qt::UserRole, kInfoPage);
-    for (const char* n : {"Radio Wide", "Controls", "Keypad", "Display & Menu"}) {
-        auto* it = new QTreeWidgetItem(config, QStringList{QString::fromLatin1(n)});
-        it->setIcon(0, icon(QStyle::SP_FileIcon));
-        it->setData(0, Qt::UserRole, kInfoPage);
-    }
-
-    auto* conv = new QTreeWidgetItem(treeRoot_, QStringList{"Conventional"});
-    conv->setIcon(0, icon(QStyle::SP_DirIcon));
-    conv->setData(0, Qt::UserRole, kInfoPage);
-    auto* zonesIt = new QTreeWidgetItem(conv, QStringList{"Zones & Channels"});
-    zonesIt->setIcon(0, icon(QStyle::SP_FileIcon));
-    zonesIt->setData(0, Qt::UserRole, kZonesPage);
-    zonesItem_ = zonesIt;
-
-    for (const char* n : {"ASTRO Systems", "Trunking", "Scan"}) {
-        auto* it = new QTreeWidgetItem(treeRoot_, QStringList{QString::fromLatin1(n)});
-        it->setIcon(0, icon(QStyle::SP_DirIcon));
-        it->setData(0, Qt::UserRole, kInfoPage);
-    }
+    treeRoot_->setIcon(0, style()->standardIcon(QStyle::SP_ComputerIcon));
+    treeRoot_->setData(0, kRolePage, kInfoPage);
 
     auto* tools = new QTreeWidgetItem(treeRoot_, QStringList{"Tools"});
-    tools->setIcon(0, icon(QStyle::SP_DirIcon));
-    tools->setData(0, Qt::UserRole, kInfoPage);
+    tools->setIcon(0, style()->standardIcon(QStyle::SP_DirIcon));
+    tools->setData(0, kRolePage, -1);
     struct ToolItem {
         const char* name;
         int page;
@@ -224,17 +249,84 @@ void MainWindow::buildTree() {
                                   {"Radio", kRadioPage}};
     for (const auto& t : toolItems) {
         auto* it = new QTreeWidgetItem(tools, QStringList{QString::fromLatin1(t.name)});
-        it->setIcon(0, icon(QStyle::SP_FileIcon));
-        it->setData(0, Qt::UserRole, t.page);
+        it->setIcon(0, style()->standardIcon(QStyle::SP_FileIcon));
+        it->setData(0, kRolePage, t.page);
     }
 
-    tree_->expandAll();
-
     connect(tree_, &QTreeWidget::currentItemChanged, this,
-            [this](QTreeWidgetItem* cur, QTreeWidgetItem*) {
-                if (!cur) return;
-                pages_->setCurrentIndex(cur->data(0, Qt::UserRole).toInt());
-            });
+            [this](QTreeWidgetItem* cur, QTreeWidgetItem*) { navigateTreeItem(cur); });
+    connect(tree_, &QTreeWidget::itemSelectionChanged, this, [this] {
+        const auto selected = tree_->selectedItems();
+        if (!selected.isEmpty()) navigateTreeItem(selected.first());
+    });
+}
+
+void MainWindow::navigateTreeItem(QTreeWidgetItem* item) {
+    if (!item) return;
+    const int page = item->data(0, kRolePage).toInt();
+    if (page < 0) return;
+    if (page == kSectionPage) showSection(item->data(0, kRoleSection).toInt());
+    pages_->setCurrentIndex(page);
+}
+
+void MainWindow::buildModelTree() {
+    if (!treeRoot_) return;
+    while (treeRoot_->childCount()) delete treeRoot_->takeChild(0);
+    zonesItem_ = nullptr;
+    if (!model_) {
+        treeRoot_->setText(0, "No codeplug");
+        return;
+    }
+    treeRoot_->setText(0, QString::fromStdString(cp_.header.serial) + "  " +
+                             QString::fromStdString(cp_.header.model));
+
+    QHash<QString, QTreeWidgetItem*> groups;
+    const auto& sections = model_->Sections();
+    for (size_t i = 0; i < sections.size(); ++i) {
+        const auto& s = sections[i];
+        const QString group = QString::fromStdString(s.group);
+        QTreeWidgetItem* gi = groups.value(group);
+        if (!gi) {
+            gi = new QTreeWidgetItem(treeRoot_, QStringList{group});
+            gi->setIcon(0, style()->standardIcon(QStyle::SP_DirIcon));
+            gi->setData(0, kRolePage, -1);
+            groups.insert(group, gi);
+        }
+        QString label = QString::fromStdString(s.name);
+        if (s.records.size() != 1)
+            label += QString("  (%1)").arg(static_cast<int>(s.records.size()));
+        auto* it = new QTreeWidgetItem(gi, QStringList{label});
+        it->setIcon(0, style()->standardIcon(QStyle::SP_FileIcon));
+        int page = kSectionPage;
+        if (s.id == "radio_information") {
+            page = kInfoPage;
+        } else if (s.id == "zone_channel_assignment") {
+            page = kZonesPage;
+            zonesItem_ = it;
+        }
+        it->setData(0, kRolePage, page);
+        it->setData(0, kRoleSection, static_cast<int>(i));
+        it->setToolTip(0, QString("Confidence: %1")
+                              .arg(QString::fromUtf8(opendepot::ConfidenceName(s.confidence))));
+    }
+
+    auto* tools = new QTreeWidgetItem(treeRoot_, QStringList{"Tools"});
+    tools->setIcon(0, style()->standardIcon(QStyle::SP_DirIcon));
+    tools->setData(0, kRolePage, -1);
+    struct ToolItem {
+        const char* name;
+        int page;
+    };
+    const ToolItem toolItems[] = {{"Service Report", kReportPage},
+                                  {"Codeplug Doctor", kDoctorPage},
+                                  {"Diff", kDiffPage},
+                                  {"Radio", kRadioPage}};
+    for (const auto& t : toolItems) {
+        auto* it = new QTreeWidgetItem(tools, QStringList{QString::fromLatin1(t.name)});
+        it->setIcon(0, style()->standardIcon(QStyle::SP_FileIcon));
+        it->setData(0, kRolePage, t.page);
+    }
+    tree_->expandAll();
 }
 
 QWidget* MainWindow::makeCard(const QString& caption, QLabel** value, const QString& initial) {
@@ -294,7 +386,7 @@ QWidget* MainWindow::buildRadioInfoPage() {
     grid->setHorizontalSpacing(14);
     grid->setVerticalSpacing(14);
     grid->addWidget(makeCard("Serial", &serial_), 0, 0);
-    grid->addWidget(makeCard("Model", &model_), 0, 1);
+    grid->addWidget(makeCard("Model", &modelLabel_), 0, 1);
     grid->addWidget(makeCard("FLASHcode", &flashcode_), 0, 2);
     grid->addWidget(makeCard("Header version", &headerVersion_), 1, 0);
     grid->addWidget(makeCard("Records", &recordCount_), 1, 1);
@@ -345,9 +437,15 @@ QWidget* MainWindow::buildZonesPage() {
     auto* lay = new QVBoxLayout(page);
     lay->setContentsMargins(32, 26, 32, 32);
     lay->setSpacing(12);
-    auto* title = new QLabel("Zones and Channels");
+    auto* title = new QLabel("Zone Channel Assignment");
     title->setObjectName("pageTitle");
     lay->addWidget(title);
+    auto* hint = new QLabel(
+        "Select a channel (or a zone header) to edit its fields. Changes update the in-memory "
+        "codeplug; use File > Save to write them.");
+    hint->setObjectName("muted");
+    hint->setWordWrap(true);
+    lay->addWidget(hint);
 
     zones_ = new QTableWidget(0, 5);
     zones_->setHorizontalHeaderLabels({"#", "Channel", "Mode", "RX MHz", "TX MHz"});
@@ -359,6 +457,153 @@ QWidget* MainWindow::buildZonesPage() {
     zones_->setSelectionBehavior(QAbstractItemView::SelectRows);
     zones_->setShowGrid(false);
     lay->addWidget(zones_, 1);
+
+    auto* editor = new QFrame;
+    editor->setObjectName("card");
+    auto* el = new QVBoxLayout(editor);
+    el->setContentsMargins(16, 14, 16, 14);
+    el->setSpacing(10);
+
+    auto* row1 = new QHBoxLayout;
+    row1->setSpacing(8);
+    row1->addWidget(new QLabel("Zone"));
+    zoneNameEdit_ = new QLineEdit;
+    row1->addWidget(zoneNameEdit_, 1);
+    row1->addWidget(new QLabel("Channel"));
+    channelNameEdit_ = new QLineEdit;
+    row1->addWidget(channelNameEdit_, 1);
+    el->addLayout(row1);
+
+    auto* row2 = new QHBoxLayout;
+    row2->setSpacing(8);
+    row2->addWidget(new QLabel("RX MHz"));
+    rxEdit_ = new QLineEdit;
+    rxEdit_->setMaximumWidth(110);
+    row2->addWidget(rxEdit_);
+    row2->addWidget(new QLabel("TX MHz"));
+    txEdit_ = new QLineEdit;
+    txEdit_->setMaximumWidth(110);
+    row2->addWidget(txEdit_);
+    row2->addWidget(new QLabel("RX squelch"));
+    rxSqEdit_ = new QLineEdit;
+    rxSqEdit_->setMaximumWidth(70);
+    row2->addWidget(rxSqEdit_);
+    row2->addWidget(new QLabel("TX squelch"));
+    txSqEdit_ = new QLineEdit;
+    txSqEdit_->setMaximumWidth(70);
+    row2->addWidget(txSqEdit_);
+    row2->addStretch(1);
+    auto* apply = new QPushButton("Apply changes");
+    apply->setObjectName("accent");
+    connect(apply, &QPushButton::clicked, this, &MainWindow::applyChannelEdit);
+    row2->addWidget(apply);
+    el->addLayout(row2);
+    lay->addWidget(editor);
+
+    connect(zones_, &QTableWidget::itemSelectionChanged, this, [this] {
+        const int row = zones_->currentRow();
+        if (row < 0) return;
+        auto* it = zones_->item(row, 0);
+        if (!it) return;
+        editZone_ = it->data(kRoleZone).toInt();
+        editChannel_ = it->data(kRoleChannel).toInt();
+        if (!model_ || editZone_ < 0) return;
+        const auto* z = model_->Zone(editZone_);
+        if (!z) return;
+        zoneNameEdit_->setText(QString::fromStdString(z->name));
+        const auto* ch = editChannel_ >= 0 ? model_->Channel(editZone_, editChannel_) : nullptr;
+        for (auto* edit : {channelNameEdit_, rxEdit_, txEdit_, rxSqEdit_, txSqEdit_})
+            edit->setEnabled(ch != nullptr);
+        if (ch) {
+            channelNameEdit_->setText(QString::fromStdString(ch->name));
+            rxEdit_->setText(QString::number(ch->rxMHz, 'f', 5));
+            txEdit_->setText(QString::number(ch->txMHz, 'f', 5));
+            rxSqEdit_->setText(QString::number(ch->squelchRx));
+            txSqEdit_->setText(QString::number(ch->squelchTx));
+        } else {
+            channelNameEdit_->clear();
+            rxEdit_->clear();
+            txEdit_->clear();
+            rxSqEdit_->clear();
+            txSqEdit_->clear();
+        }
+    });
+    return page;
+}
+
+QWidget* MainWindow::buildSectionPage() {
+    auto* page = new QWidget;
+    auto* lay = new QVBoxLayout(page);
+    lay->setContentsMargins(32, 26, 32, 32);
+    lay->setSpacing(10);
+    sectionTitle_ = new QLabel("Section");
+    sectionTitle_->setObjectName("pageTitle");
+    lay->addWidget(sectionTitle_);
+    sectionSubtitle_ = new QLabel;
+    sectionSubtitle_->setObjectName("muted");
+    sectionSubtitle_->setWordWrap(true);
+    lay->addWidget(sectionSubtitle_);
+
+    sectionRecords_ = new QTableWidget(0, 5);
+    sectionRecords_->setHorizontalHeaderLabels(
+        {"Record ID", "Tag", "Inst", "Bytes", "Family / Name"});
+    sectionRecords_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    sectionRecords_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    sectionRecords_->verticalHeader()->setVisible(false);
+    sectionRecords_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    sectionRecords_->setSelectionBehavior(QAbstractItemView::SelectRows);
+    sectionRecords_->setSelectionMode(QAbstractItemView::SingleSelection);
+    lay->addWidget(sectionRecords_, 2);
+
+    auto* editRow = new QHBoxLayout;
+    editRow->setSpacing(12);
+
+    auto* namesCol = new QVBoxLayout;
+    auto* namesLabel = new QLabel("Names");
+    namesLabel->setObjectName("sectionTitle");
+    namesCol->addWidget(namesLabel);
+    sectionNames_ = new QTableWidget(0, 2);
+    sectionNames_->setHorizontalHeaderLabels({"#", "Name"});
+    sectionNames_->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    sectionNames_->verticalHeader()->setVisible(false);
+    sectionNames_->setSelectionBehavior(QAbstractItemView::SelectRows);
+    namesCol->addWidget(sectionNames_, 1);
+    sectionApplyNames_ = new QPushButton("Apply names");
+    sectionApplyNames_->setObjectName("accent");
+    connect(sectionApplyNames_, &QPushButton::clicked, this, &MainWindow::applySectionNames);
+    namesCol->addWidget(sectionApplyNames_, 0, Qt::AlignLeft);
+    editRow->addLayout(namesCol, 1);
+
+    auto* payloadCol = new QVBoxLayout;
+    auto* nameLabel = new QLabel("Name");
+    nameLabel->setObjectName("sectionTitle");
+    payloadCol->addWidget(nameLabel);
+    sectionNameEdit_ = new QLineEdit;
+    sectionNameEdit_->setVisible(false);
+    payloadCol->addWidget(sectionNameEdit_);
+    auto* payloadLabel = new QLabel("Record payload (hex)");
+    payloadLabel->setObjectName("sectionTitle");
+    payloadCol->addWidget(payloadLabel);
+    sectionHex_ = new QPlainTextEdit;
+    sectionHex_->setPlaceholderText("Select a record to edit its payload.");
+    sectionHex_->setFont(QFont("Consolas", 10));
+    payloadCol->addWidget(sectionHex_, 1);
+    auto* applyPayload = new QPushButton("Apply payload");
+    applyPayload->setObjectName("accent");
+    connect(applyPayload, &QPushButton::clicked, this, &MainWindow::applySectionPayload);
+    payloadCol->addWidget(applyPayload, 0, Qt::AlignLeft);
+    editRow->addLayout(payloadCol, 1);
+
+    lay->addLayout(editRow, 3);
+
+    sectionDetail_ = new QPlainTextEdit;
+    sectionDetail_->setReadOnly(true);
+    sectionDetail_->setMaximumHeight(130);
+    sectionDetail_->setFont(QFont("Consolas", 10));
+    lay->addWidget(sectionDetail_);
+
+    connect(sectionRecords_, &QTableWidget::itemSelectionChanged, this,
+            [this] { refreshSectionRecord(sectionRecords_->currentRow()); });
     return page;
 }
 
@@ -452,9 +697,30 @@ void MainWindow::openFile(const QString& file) {
     setCodeplug(std::move(cp), file);
 }
 
+void MainWindow::saveCodeplug() {
+    if (!have_) return;
+    if (path_.isEmpty() || path_ == "(radio)") {
+        saveCodeplugAs();
+        return;
+    }
+    std::string err;
+    if (!opendepot::SaveCodeplug(std::filesystem::path(path_.toStdWString()), cp_, err)) {
+        QMessageBox::critical(this, "Save codeplug",
+                              QString::fromStdString("Cannot save: " + err));
+        return;
+    }
+    dirty_ = false;
+    const QFileInfo info(path_);
+    setWindowTitle(info.fileName().isEmpty() ? "OpenDepot"
+                                             : QString("OpenDepot - %1").arg(info.fileName()));
+    updateDashboard();
+    statusBar()->showMessage("Saved " + path_, 8000);
+}
+
 void MainWindow::saveCodeplugAs() {
     if (!have_) return;
-    const QString file = QFileDialog::getSaveFileName(this, "Save codeplug", path_,
+    const QString start = (path_.isEmpty() || path_ == "(radio)") ? QString() : path_;
+    const QString file = QFileDialog::getSaveFileName(this, "Save codeplug", start,
                                                       "Codeplug (*.cpg)");
     if (file.isEmpty()) return;
     std::string err;
@@ -464,6 +730,10 @@ void MainWindow::saveCodeplugAs() {
         return;
     }
     path_ = file;
+    dirty_ = false;
+    const QFileInfo info(path_);
+    setWindowTitle(info.fileName().isEmpty() ? "OpenDepot"
+                                             : QString("OpenDepot - %1").arg(info.fileName()));
     updateDashboard();
     statusBar()->showMessage("Saved " + file, 8000);
 }
@@ -473,20 +743,31 @@ void MainWindow::setCodeplug(opendepot::Codeplug cp, const QString& path) {
     have_ = true;
     path_ = path;
     openedAt_ = QDateTime::currentDateTime();
+    dirty_ = false;
     saveAct_->setEnabled(true);
-    if (treeRoot_)
-        treeRoot_->setText(0, QString::fromStdString(cp_.header.serial) + "  " +
-                                 QString::fromStdString(cp_.header.model));
+    model_ = std::make_unique<opendepot::CodeplugModel>(cp_);
+    std::string err;
+    if (!model_->Reload(err)) {
+        model_.reset();
+        QMessageBox::warning(this, "Codeplug model", QString::fromStdString(err));
+    }
+    editZone_ = -1;
+    editChannel_ = -1;
+    sectionIndex_ = -1;
+    buildModelTree();
     updateDashboard();
     pages_->setCurrentIndex(kInfoPage);
     tree_->setCurrentItem(treeRoot_);
+    const QFileInfo info(path_);
+    setWindowTitle(info.fileName().isEmpty() ? "OpenDepot"
+                                             : QString("OpenDepot - %1").arg(info.fileName()));
     statusBar()->showMessage("Loaded " + path, 8000);
 }
 
 void MainWindow::updateDashboard() {
     if (!have_) {
         serial_->setText("-");
-        model_->setText("-");
+        modelLabel_->setText("-");
         flashcode_->setText("-");
         headerVersion_->setText("-");
         recordCount_->setText("-");
@@ -497,7 +778,7 @@ void MainWindow::updateDashboard() {
         return;
     }
     serial_->setText(QString::fromStdString(cp_.header.serial));
-    model_->setText(QString::fromStdString(cp_.header.model));
+    modelLabel_->setText(QString::fromStdString(cp_.header.model));
     flashcode_->setText(QString::fromStdString(opendepot::GetFlashcode(cp_)));
     headerVersion_->setText(QString::fromStdString(cp_.header.version));
     size_t good = 0;
@@ -545,13 +826,11 @@ void MainWindow::updateDashboard() {
 }
 
 void MainWindow::fillZones(QTableWidget* table, bool groupRows) {
+    if (!table) return;
     table->setRowCount(0);
-    if (!have_) return;
-    std::vector<opendepot::ZoneView> zones;
-    opendepot::ParseZones(cp_, zones);
-
+    if (!model_) return;
     int index = 0;
-    for (const auto& z : zones) {
+    for (const auto& z : model_->Zones()) {
         if (groupRows) {
             const int row = table->rowCount();
             table->insertRow(row);
@@ -564,6 +843,8 @@ void MainWindow::fillZones(QTableWidget* table, bool groupRows) {
             item->setFont(f);
             item->setBackground(QColor("#f8fafc"));
             item->setForeground(QColor("#475569"));
+            item->setData(kRoleZone, z.index);
+            item->setData(kRoleChannel, -1);
             table->setItem(row, 0, item);
             table->setSpan(row, 0, 1, 5);
             table->setRowHeight(row, 34);
@@ -571,26 +852,302 @@ void MainWindow::fillZones(QTableWidget* table, bool groupRows) {
         if (z.channels.empty()) {
             const int row = table->rowCount();
             table->insertRow(row);
-            table->setItem(row, 0, new QTableWidgetItem(""));
-            table->setItem(row, 1, new QTableWidgetItem("-"));
-            table->setItem(row, 2, new QTableWidgetItem(""));
-            table->setItem(row, 3, new QTableWidgetItem(""));
-            table->setItem(row, 4, new QTableWidgetItem(""));
+            for (int c = 0; c < 5; ++c) {
+                auto* it = new QTableWidgetItem(c == 1 ? "-" : "");
+                it->setData(kRoleZone, z.index);
+                it->setData(kRoleChannel, -1);
+                table->setItem(row, c, it);
+            }
             continue;
         }
         for (const auto& ch : z.channels) {
             const int row = table->rowCount();
             table->insertRow(row);
-            table->setItem(row, 0, new QTableWidgetItem(QString::number(index++)));
-            table->setItem(row, 1, new QTableWidgetItem(QString::fromStdString(ch.name)));
-            table->setItem(row, 2,
-                           new QTableWidgetItem(ch.rxWord == ch.txWord ? "Simple" : "Split"));
-            table->setItem(row, 3, new QTableWidgetItem(QString::number(
-                                              opendepot::WordToMHz(ch.rxWord), 'f', 5)));
-            table->setItem(row, 4, new QTableWidgetItem(QString::number(
-                                              opendepot::WordToMHz(ch.txWord), 'f', 5)));
+            auto add = [&](int col, const QString& text) {
+                auto* it = new QTableWidgetItem(text);
+                it->setData(kRoleZone, z.index);
+                it->setData(kRoleChannel, ch.index);
+                table->setItem(row, col, it);
+            };
+            add(0, QString::number(index++));
+            add(1, QString::fromStdString(ch.name));
+            add(2, ch.rxWord == ch.txWord ? "Simple" : "Split");
+            add(3, QString::number(ch.rxMHz, 'f', 5));
+            add(4, QString::number(ch.txMHz, 'f', 5));
         }
     }
+}
+
+void MainWindow::selectChannelRow(int zone, int channel) {
+    if (!zones_) return;
+    for (int row = 0; row < zones_->rowCount(); ++row) {
+        auto* it = zones_->item(row, 0);
+        if (!it) continue;
+        if (it->data(kRoleZone).toInt() == zone && it->data(kRoleChannel).toInt() == channel) {
+            zones_->selectRow(row);
+            return;
+        }
+    }
+}
+
+const opendepot::RecordNode* MainWindow::findNode(uint32_t id) const {
+    if (!model_) return nullptr;
+    for (const auto& n : model_->RecordNodes())
+        if (n.id == id) return &n;
+    return nullptr;
+}
+
+void MainWindow::showSection(int index) {
+    if (!model_ || index < 0 || index >= static_cast<int>(model_->Sections().size())) return;
+    sectionIndex_ = index;
+    const auto& s = model_->Sections()[index];
+    sectionTitle_->setText(QString::fromStdString(s.name));
+    sectionSubtitle_->setText(QString("%1  -  %2 record(s)  -  confidence: %3")
+                                  .arg(QString::fromStdString(s.group))
+                                  .arg(static_cast<int>(s.records.size()))
+                                  .arg(QString::fromUtf8(opendepot::ConfidenceName(s.confidence))));
+    refreshSectionList();
+}
+
+void MainWindow::refreshSectionList() {
+    if (!model_ || !sectionRecords_ || sectionIndex_ < 0 ||
+        sectionIndex_ >= static_cast<int>(model_->Sections().size()))
+        return;
+    const QSignalBlocker block(sectionRecords_);
+    sectionRecords_->setRowCount(0);
+    const auto& s = model_->Sections()[sectionIndex_];
+    for (uint32_t id : s.records) {
+        const auto* n = findNode(id);
+        if (!n) continue;
+        const int row = sectionRecords_->rowCount();
+        sectionRecords_->insertRow(row);
+        auto* idItem = new QTableWidgetItem(
+            QString("0x%1").arg(static_cast<qulonglong>(id), 8, 16, QChar('0')).toUpper());
+        idItem->setData(kRoleRecordId, id);
+        sectionRecords_->setItem(row, 0, idItem);
+        sectionRecords_->setItem(
+            row, 1,
+            new QTableWidgetItem(
+                QString("0x%1").arg(static_cast<int>(n->tag), 4, 16, QChar('0')).toUpper()));
+        sectionRecords_->setItem(row, 2, new QTableWidgetItem(QString::number(n->inst)));
+        sectionRecords_->setItem(row, 3, new QTableWidgetItem(QString::number(n->length)));
+        QString desc = QString::fromStdString(n->family);
+        if (!n->name.empty()) desc += "  -  " + QString::fromStdString(n->name);
+        sectionRecords_->setItem(row, 4, new QTableWidgetItem(desc));
+    }
+    if (sectionRecords_->rowCount() > 0) sectionRecords_->selectRow(0);
+}
+
+void MainWindow::refreshSectionRecord(int row) {
+    if (!sectionRecords_ || row < 0) return;
+    auto* idItem = sectionRecords_->item(row, 0);
+    if (!idItem) return;
+    const uint32_t id = idItem->data(kRoleRecordId).toUInt();
+    const auto* n = findNode(id);
+    if (!n) return;
+
+    sectionHex_->setPlainText(HexBytes(n->payload));
+    const bool isTable = n->family == "name_table" && !n->names.empty();
+    const bool isName = n->family == "name";
+    sectionNames_->setVisible(isTable);
+    sectionNameEdit_->setVisible(isName);
+    sectionApplyNames_->setVisible(isTable || isName);
+    if (isTable) {
+        sectionNames_->setRowCount(0);
+        for (size_t i = 0; i < n->names.size(); ++i) {
+            sectionNames_->insertRow(int(i));
+            sectionNames_->setItem(int(i), 0, new QTableWidgetItem(QString::number(i + 1)));
+            sectionNames_->setItem(int(i), 1,
+                                   new QTableWidgetItem(QString::fromStdString(n->names[i])));
+        }
+    } else {
+        sectionNames_->setRowCount(0);
+    }
+    if (isName) sectionNameEdit_->setText(QString::fromStdString(n->name));
+    else sectionNameEdit_->clear();
+
+    QString detail;
+    detail += QString("Record 0x%1   tag 0x%2   instance %3   %4 bytes\n")
+                  .arg(static_cast<qulonglong>(id), 8, 16, QChar('0'))
+                  .arg(static_cast<int>(n->tag), 4, 16, QChar('0'))
+                  .arg(static_cast<int>(n->inst))
+                  .arg(n->length)
+                  .toUpper();
+    detail += QString("Family: %1   Section: %2\n")
+                  .arg(QString::fromStdString(n->family),
+                       QString::fromStdString(n->section));
+    if (!n->strings.empty()) {
+        QStringList ss;
+        for (const auto& s : n->strings) ss << QString::fromStdString(s);
+        detail += "Strings: " + ss.join(" | ") + "\n";
+    }
+    if (!n->references.empty()) {
+        QStringList rs;
+        for (const auto& r : n->references)
+            rs << QString("0x%1/%2@%3")
+                      .arg(static_cast<int>(r.tag), 4, 16, QChar('0'))
+                      .arg(static_cast<int>(r.inst))
+                      .arg(r.offset);
+        detail += "References: " + rs.join(", ") + "\n";
+    }
+    sectionDetail_->setPlainText(detail);
+}
+
+void MainWindow::applySectionPayload() {
+    if (!model_ || !sectionRecords_) return;
+    const int row = sectionRecords_->currentRow();
+    if (row < 0) return;
+    auto* idItem = sectionRecords_->item(row, 0);
+    if (!idItem) return;
+    const uint32_t id = idItem->data(kRoleRecordId).toUInt();
+    const auto* n = findNode(id);
+    if (!n) return;
+    std::vector<uint8_t> bytes;
+    if (!ParseHex(sectionHex_->toPlainText(), bytes)) {
+        QMessageBox::warning(this, "Payload", "The payload must be an even number of hex digits.");
+        return;
+    }
+    const uint16_t tag = n->tag;
+    const uint16_t inst = n->inst;
+    if (!model_->SetRecordPayload(tag, inst, bytes)) {
+        QMessageBox::warning(this, "Payload", "The record payload could not be replaced.");
+        return;
+    }
+    refreshAfterEdit();
+    if (row < sectionRecords_->rowCount()) sectionRecords_->selectRow(row);
+    statusBar()->showMessage("Record payload updated in memory - File > Save to keep it.", 8000);
+}
+
+void MainWindow::applySectionNames() {
+    if (!model_ || !sectionRecords_) return;
+    const int row = sectionRecords_->currentRow();
+    if (row < 0) return;
+    auto* idItem = sectionRecords_->item(row, 0);
+    if (!idItem) return;
+    const uint32_t id = idItem->data(kRoleRecordId).toUInt();
+    const auto* n = findNode(id);
+    if (!n) return;
+    std::vector<uint8_t> payload = n->payload;
+    bool changed = false;
+    if (n->family == "name_table") {
+        const bool special = n->tag == 0x0FFF;
+        const int count = special ? Be16(payload, 4) : Be16(payload, 6);
+        const int entrySize = special ? 17 : Be16(payload, 2);
+        const size_t base = special ? 6 : 8;
+        if (entrySize < 2) return;
+        const int rows = std::min(count, sectionNames_->rowCount());
+        for (int i = 0; i < rows; ++i) {
+            auto* nameItem = sectionNames_->item(i, 1);
+            if (!nameItem) continue;
+            PutName(payload, base + size_t(i) * size_t(entrySize), size_t(entrySize),
+                    nameItem->text());
+            changed = true;
+        }
+    } else if (n->family == "name") {
+        PutName(payload, 6, payload.size() - 6, sectionNameEdit_->text());
+        changed = true;
+    }
+    if (!changed) return;
+    const uint16_t tag = n->tag;
+    const uint16_t inst = n->inst;
+    if (!model_->SetRecordPayload(tag, inst, payload)) {
+        QMessageBox::warning(this, "Names", "The name record could not be updated.");
+        return;
+    }
+    refreshAfterEdit();
+    if (row < sectionRecords_->rowCount()) sectionRecords_->selectRow(row);
+    statusBar()->showMessage("Names updated in memory - File > Save to keep them.", 8000);
+}
+
+void MainWindow::applyChannelEdit() {
+    if (!model_ || editZone_ < 0) return;
+    const auto* z = model_->Zone(editZone_);
+    if (!z) return;
+    const std::string oldZone = z->name;
+    const auto* ch = editChannel_ >= 0 ? model_->Channel(editZone_, editChannel_) : nullptr;
+    const std::string oldName = ch ? ch->name : std::string();
+    const uint32_t oldRxWord = ch ? ch->rxWord : 0;
+    const uint32_t oldTxWord = ch ? ch->txWord : 0;
+    const int oldRxSq = ch ? ch->squelchRx : 0;
+    const int oldTxSq = ch ? ch->squelchTx : 0;
+
+    bool changed = false;
+    const std::string newZone = zoneNameEdit_->text().toStdString();
+    if (newZone != oldZone) {
+        if (!model_->SetZoneName(editZone_, newZone)) {
+            QMessageBox::warning(this, "Zone", "The zone name could not be updated.");
+            return;
+        }
+        changed = true;
+    }
+    if (ch) {
+        const std::string newName = channelNameEdit_->text().toStdString();
+        if (newName != oldName) {
+            if (!model_->SetChannelName(editZone_, editChannel_, newName)) {
+                QMessageBox::warning(this, "Channel", "The channel name could not be updated.");
+                return;
+            }
+            changed = true;
+        }
+        bool ok = false;
+        const double rx = rxEdit_->text().toDouble(&ok);
+        if (!ok || rx <= 0) {
+            QMessageBox::warning(this, "Channel", "RX MHz is not a valid frequency.");
+            return;
+        }
+        const double tx = txEdit_->text().toDouble(&ok);
+        if (!ok || tx <= 0) {
+            QMessageBox::warning(this, "Channel", "TX MHz is not a valid frequency.");
+            return;
+        }
+        if (opendepot::MHzToWord(rx) != oldRxWord || opendepot::MHzToWord(tx) != oldTxWord) {
+            if (!model_->SetChannelFrequency(editZone_, editChannel_, rx, tx)) {
+                QMessageBox::warning(this, "Channel", "The frequency could not be updated.");
+                return;
+            }
+            changed = true;
+        }
+        const int rxSq = rxSqEdit_->text().toInt(&ok);
+        if (!ok || rxSq < 0 || rxSq > 255) {
+            QMessageBox::warning(this, "Channel", "RX squelch must be 0-255.");
+            return;
+        }
+        const int txSq = txSqEdit_->text().toInt(&ok);
+        if (!ok || txSq < 0 || txSq > 255) {
+            QMessageBox::warning(this, "Channel", "TX squelch must be 0-255.");
+            return;
+        }
+        if (rxSq != oldRxSq || txSq != oldTxSq) {
+            if (!model_->SetChannelSquelch(editZone_, editChannel_, rxSq, txSq)) {
+                QMessageBox::warning(this, "Channel", "The squelch values could not be updated.");
+                return;
+            }
+            changed = true;
+        }
+    }
+    if (!changed) {
+        statusBar()->showMessage("No changes to apply.", 5000);
+        return;
+    }
+    const int zone = editZone_, channel = editChannel_;
+    refreshAfterEdit();
+    selectChannelRow(zone, channel);
+    statusBar()->showMessage("Channel updated in memory - File > Save to keep it.", 8000);
+}
+
+void MainWindow::refreshAfterEdit() {
+    dirty_ = true;
+    const QFileInfo info(path_);
+    setWindowTitle(info.fileName().isEmpty() ? "OpenDepot *"
+                                             : QString("OpenDepot * - %1").arg(info.fileName()));
+    updateDashboard();
+    if (sectionIndex_ >= 0) refreshSectionList();
+}
+
+void MainWindow::refreshZones() {
+    if (!model_ || !zones_) return;
+    fillZones(zones_, true);
+    selectChannelRow(editZone_, editChannel_);
 }
 
 void MainWindow::showZones() {
