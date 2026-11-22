@@ -160,6 +160,11 @@ catalog for one codeplug.
 
 The Qt app builds its tree directly from `CodeplugModel::Sections()`:
 
+- **Radio Wide** opens a CPS-style tab set with the portable-depot General
+  layout. Maximum Channels is mapped to `0x000A` offset 8 (u16 little-endian);
+  the other controls are visible but disabled until their offsets are verified,
+  and a button opens the raw Radio Wide records. See
+  [RADIO_WIDE_MAP.md](RADIO_WIDE_MAP.md).
 - **Zone Channel Assignment** opens the grouped channel table and an editor for
   zone name, channel name, RX/TX MHz, and RX/TX squelch.
 - **Radio Information** keeps the dashboard.

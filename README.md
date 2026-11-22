@@ -118,7 +118,12 @@ CPS model.
   passcode status, codeplug file, FLASHcode feature chips.
 - **Zone Channel Assignment** - grouped channel table plus an editor for zone and
   channel names, RX/TX MHz, and RX/TX squelch.
-- **Every other section** - Radio Wide, Controls, Display & Menu, Phone, Secure,
+- **Radio Wide** - CPS-style tab set (General, Emergency, TPS, Alert Tones,
+  Time-Out Timers, Alarm, Home Mode, and the audio/VRS/advanced tabs). Maximum
+  Channels is bound and editable; the remaining controls are shown for layout
+  parity but disabled until their record offsets are verified. A button opens
+  the raw Radio Wide records.
+- **Every other section** - Controls, Display & Menu, Phone, Secure,
   Trunking, Conventional Personality, aliases, MPL, MDC, DTMF, ASTRO Systems,
   Scan, Expert - opens a record explorer. It lists the section's records with
   tag/instance/size/family, resolves references and strings, edits name tables,

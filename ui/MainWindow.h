@@ -23,6 +23,7 @@ class QPlainTextEdit;
 class QProgressDialog;
 class QPushButton;
 class QScrollArea;
+class QSpinBox;
 class QStackedWidget;
 class QTableWidget;
 class QTableWidgetItem;
@@ -87,7 +88,10 @@ private:
     const opendepot::RecordNode* findNode(uint32_t id) const;
     QWidget* buildRadioInfoPage();
     QWidget* buildZonesPage();
+    QWidget* buildRadioWidePage();
     QWidget* buildSectionPage();
+    void refreshRadioWidePage();
+    void setMaxChannels(int value);
     QWidget* buildTextPage(const QString& title, QPlainTextEdit** out, const QString& button,
                            void (MainWindow::*handler)());
     QWidget* buildRadioPage();
@@ -124,6 +128,7 @@ private:
     QWidget* chips_ = nullptr;
     QGridLayout* chipsLayout_ = nullptr;
     QTableWidget* zones_ = nullptr;
+    QSpinBox* rwMaxChannels_ = nullptr;
     QLineEdit* zoneNameEdit_ = nullptr;
     QLineEdit* channelNameEdit_ = nullptr;
     QLineEdit* rxEdit_ = nullptr;

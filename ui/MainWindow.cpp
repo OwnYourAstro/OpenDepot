@@ -14,6 +14,7 @@
 #include <QAction>
 #include <QAbstractItemView>
 #include <QApplication>
+#include <QCheckBox>
 #include <QColor>
 #include <QComboBox>
 #include <QDateTime>
@@ -24,6 +25,7 @@
 #include <QFont>
 #include <QFrame>
 #include <QGridLayout>
+#include <QGroupBox>
 #include <QHBoxLayout>
 #include <QHash>
 #include <QHeaderView>
@@ -38,6 +40,7 @@
 #include <QScrollArea>
 #include <QSettings>
 #include <QSignalBlocker>
+#include <QSpinBox>
 #include <QStackedWidget>
 #include <QTabWidget>
 #include <QStatusBar>
@@ -63,6 +66,7 @@ constexpr int kDoctorPage = 3;
 constexpr int kDiffPage = 4;
 constexpr int kRadioPage = 5;
 constexpr int kSectionPage = 6;
+constexpr int kRadioWidePage = 7;
 constexpr int kRolePage = Qt::UserRole;
 constexpr int kRoleSection = Qt::UserRole + 1;
 constexpr int kRoleZone = Qt::UserRole + 2;
@@ -262,6 +266,7 @@ void MainWindow::setupUi() {
                                     &MainWindow::compareCodeplug));
     pages_->addWidget(buildRadioPage());
     pages_->addWidget(buildSectionPage());
+    pages_->addWidget(buildRadioWidePage());
     pages_->setCurrentIndex(kInfoPage);
     root->addWidget(pages_, 1);
 
@@ -344,6 +349,8 @@ void MainWindow::buildModelTree() {
         int page = kSectionPage;
         if (s.id == "radio_information") {
             page = kInfoPage;
+        } else if (s.id == "radio_wide") {
+            page = kRadioWidePage;
         } else if (s.id == "zone_channel_assignment") {
             page = kZonesPage;
             zonesItem_ = it;
@@ -573,6 +580,201 @@ QWidget* MainWindow::buildZonesPage() {
         }
     });
     return page;
+}
+
+QWidget* MainWindow::buildRadioWidePage() {
+    auto* page = new QWidget;
+    auto* lay = new QVBoxLayout(page);
+    lay->setContentsMargins(32, 26, 32, 32);
+    lay->setSpacing(10);
+    auto* title = new QLabel("Radio Wide");
+    title->setObjectName("pageTitle");
+    lay->addWidget(title);
+    auto* banner = new QLabel(
+        "Portable Depot Radio Wide layout. Maximum Channels is mapped; the remaining controls are "
+        "shown for parity and disabled until their record offsets are verified. Use \"Raw Radio Wide "
+        "records\" for every field.");
+    banner->setObjectName("muted");
+    banner->setWordWrap(true);
+    lay->addWidget(banner);
+
+    auto* tabs = new QTabWidget;
+    auto* scroll = new QScrollArea;
+    scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
+    auto* content = new QWidget;
+    auto* cl = new QVBoxLayout(content);
+    cl->setContentsMargins(16, 14, 16, 16);
+    cl->setSpacing(12);
+
+    auto* flags = new QGroupBox("General");
+    auto* fl = new QGridLayout(flags);
+    fl->setHorizontalSpacing(18);
+    fl->setVerticalSpacing(8);
+    auto addCheck = [&](const char* text, int row, int col) {
+        auto* cb = new QCheckBox(QString::fromLatin1(text));
+        cb->setEnabled(false);
+        fl->addWidget(cb, row, col);
+    };
+    addCheck("Radio Cloning", 0, 0);
+    addCheck("Block Pending CA/PC", 0, 1);
+    addCheck("Selectable Keypad Mute", 1, 0);
+    addCheck("Power Button", 1, 1);
+    addCheck("Last Selected Channel Per Zone Enable", 2, 0);
+    addCheck("Preset Zone and Channel Enable", 3, 0);
+
+    fl->addWidget(new QLabel("Maximum Channels (Talkgroups):"), 4, 0);
+    rwMaxChannels_ = new QSpinBox;
+    rwMaxChannels_->setRange(0, 65535);
+    rwMaxChannels_->setMaximumWidth(120);
+    connect(rwMaxChannels_, QOverload<int>::of(&QSpinBox::valueChanged), this,
+            &MainWindow::setMaxChannels);
+    fl->addWidget(rwMaxChannels_, 4, 1);
+
+    auto addCombo = [&](const char* label, int row) {
+        fl->addWidget(new QLabel(QString::fromLatin1(label)), row, 0);
+        auto* cb = new QComboBox;
+        cb->addItems({"No Indication", "Display Only", "Display and Tone"});
+        cb->setEnabled(false);
+        fl->addWidget(cb, row, 1);
+    };
+    addCombo("Out of Range Indicator:", 5);
+    addCombo("Imbalanced Coverage Indicator:", 6);
+    addCombo("System Registration Indicator:", 7);
+    addCombo("Time Format:", 8);
+    addCombo("Date Format:", 9);
+    addCombo("Channel Announcement Priority:", 10);
+    auto* chanAnn = new QCheckBox("Channel Announcement");
+    chanAnn->setEnabled(false);
+    fl->addWidget(chanAnn, 11, 0);
+    cl->addWidget(flags);
+
+    auto* power = new QGroupBox("Power Management");
+    auto* pl = new QGridLayout(power);
+    pl->addWidget(new QLabel("Wake Up Delay:"), 0, 0);
+    auto* wake = new QSpinBox;
+    wake->setRange(0, 65535);
+    wake->setEnabled(false);
+    pl->addWidget(wake, 0, 1);
+    pl->addWidget(new QLabel("LCP Echo Request Attempts:"), 1, 0);
+    auto* lcp = new QSpinBox;
+    lcp->setRange(0, 255);
+    lcp->setEnabled(false);
+    pl->addWidget(lcp, 1, 1);
+    cl->addWidget(power);
+
+    auto* user = new QGroupBox("User Information");
+    auto* ul = new QGridLayout(user);
+    auto* ars = new QCheckBox("ARS User Login Enable");
+    ars->setEnabled(false);
+    ul->addWidget(ars, 0, 0, 1, 2);
+    ul->addWidget(new QLabel("Soft ID/Username:"), 1, 0);
+    auto* soft = new QLineEdit;
+    soft->setEnabled(false);
+    ul->addWidget(soft, 1, 1);
+    ul->addWidget(new QLabel("PIN/Password:"), 2, 0);
+    auto* pin = new QLineEdit;
+    pin->setEnabled(false);
+    pin->setEchoMode(QLineEdit::Password);
+    ul->addWidget(pin, 2, 1);
+    auto* unitEnable = new QCheckBox("User Login Unit ID Enable");
+    unitEnable->setEnabled(false);
+    ul->addWidget(unitEnable, 3, 0, 1, 2);
+    ul->addWidget(new QLabel("User Login Unit ID:"), 4, 0);
+    auto* unit = new QLineEdit;
+    unit->setEnabled(false);
+    ul->addWidget(unit, 4, 1);
+    ul->addWidget(new QLabel("Cached Credential User Login Mode:"), 5, 0);
+    auto* cached = new QComboBox;
+    cached->setEnabled(false);
+    ul->addWidget(cached, 5, 1);
+    auto* aliasEnable = new QCheckBox("Radio ID Alias Enable");
+    aliasEnable->setEnabled(false);
+    ul->addWidget(aliasEnable, 6, 0, 1, 2);
+    ul->addWidget(new QLabel("Radio ID Alias:"), 7, 0);
+    auto* alias = new QLineEdit;
+    alias->setEnabled(false);
+    ul->addWidget(alias, 7, 1);
+    cl->addWidget(user);
+
+    auto* owner = new QGroupBox("Owner ID and Write Protect");
+    auto* ol = new QGridLayout(owner);
+    ol->addWidget(new QLabel("Key Type"), 0, 0);
+    auto* keyType = new QComboBox;
+    keyType->addItem("None");
+    keyType->setEnabled(false);
+    ol->addWidget(keyType, 0, 1);
+    ol->addWidget(new QLabel("Owner System ID"), 1, 0);
+    auto* ownerId = new QLineEdit;
+    ownerId->setEnabled(false);
+    ol->addWidget(ownerId, 1, 1);
+    auto* disableWp = new QCheckBox("Disable Write Protect");
+    disableWp->setEnabled(false);
+    ol->addWidget(disableWp, 2, 0, 1, 2);
+    cl->addWidget(owner);
+
+    cl->addStretch(1);
+    scroll->setWidget(content);
+    tabs->addTab(scroll, "General");
+    for (const char* name : {"Emergency", "TPS", "Alert Tones", "Time-Out Timers", "Alarm",
+                             "Home Mode", "Tx Audio Control Per Mode", "Digital Audio Options",
+                             "PA/Siren", "Advanced", "Advanced II", "VRS/DVRS", "VRS Private Line",
+                             "VRS Advanced", "VRS Personality", "Rx Audio Control", "Data",
+                             "Labtool", "Control Head"}) {
+        auto* w = new QWidget;
+        auto* wl = new QVBoxLayout(w);
+        auto* lbl = new QLabel("This page is not decoded yet.");
+        lbl->setObjectName("muted");
+        wl->addWidget(lbl);
+        wl->addStretch(1);
+        tabs->addTab(w, QString::fromLatin1(name));
+    }
+    lay->addWidget(tabs, 1);
+
+    auto* raw = new QPushButton("Raw Radio Wide records");
+    connect(raw, &QPushButton::clicked, this, [this] {
+        if (!model_) return;
+        const auto& sections = model_->Sections();
+        for (size_t i = 0; i < sections.size(); ++i) {
+            if (sections[i].id == "radio_wide") {
+                showSection(static_cast<int>(i));
+                pages_->setCurrentIndex(kSectionPage);
+                return;
+            }
+        }
+    });
+    lay->addWidget(raw, 0, Qt::AlignLeft);
+    return page;
+}
+
+void MainWindow::refreshRadioWidePage() {
+    if (!rwMaxChannels_) return;
+    int value = 0;
+    const auto* r = FindRecord(cp_, 0x000A, 0);
+    bool haveRecord = false;
+    if (r) {
+        auto p = RecordPayload(*r);
+        if (p.size() >= 10) {
+            value = p[8] | (p[9] << 8);
+            haveRecord = true;
+        }
+    }
+    const QSignalBlocker block(rwMaxChannels_);
+    rwMaxChannels_->setValue(value);
+    rwMaxChannels_->setEnabled(haveRecord);
+}
+
+void MainWindow::setMaxChannels(int value) {
+    if (!model_) return;
+    const auto* r = FindRecord(cp_, 0x000A, 0);
+    if (!r) return;
+    auto p = RecordPayload(*r);
+    if (p.size() < 10) return;
+    p[8] = uint8_t(value & 0xFF);
+    p[9] = uint8_t((value >> 8) & 0xFF);
+    if (!model_->SetRecordPayload(0x000A, 0, p)) return;
+    refreshAfterEdit();
+    statusBar()->showMessage("Maximum Channels updated in memory - File > Save to keep it.", 8000);
 }
 
 QWidget* MainWindow::buildSectionPage() {
@@ -898,6 +1100,7 @@ void MainWindow::updateDashboard() {
     }
 
     fillZones(zones_, true);
+    refreshRadioWidePage();
 }
 
 void MainWindow::fillZones(QTableWidget* table, bool groupRows) {
