@@ -759,9 +759,46 @@ QWidget* MainWindow::buildRadioWidePage() {
     for (int i = 0; i < 6; ++i) {
         auto* w = new QWidget;
         auto* wl = new QVBoxLayout(w);
-        auto* lbl = new QLabel("This page is not decoded yet.");
-        lbl->setObjectName("muted");
-        wl->addWidget(lbl);
+        if (QString::fromLatin1(generalTabs[i]) == "Home Mode") {
+            auto* form = new QGridLayout;
+            form->setHorizontalSpacing(18);
+            form->setVerticalSpacing(8);
+            auto* enabled = new QCheckBox("Home Mode Selection");
+            form->addWidget(enabled, 0, 0, 1, 2);
+            bindField("Home Mode Selection", enabled);
+            form->addWidget(new QLabel("Home Mode Zone:"), 1, 0);
+            auto* zone = new QSpinBox;
+            zone->setRange(0, 255);
+            form->addWidget(zone, 1, 1);
+            bindField("Home Mode Zone", zone);
+            form->addWidget(new QLabel("Home Mode Channel:"), 2, 0);
+            auto* channel = new QSpinBox;
+            channel->setRange(0, 65535);
+            form->addWidget(channel, 2, 1);
+            bindField("Home Mode Channel", channel);
+            auto* powerLast = new QCheckBox("Power Up On Last Selected Zone and Channel");
+            form->addWidget(powerLast, 3, 0, 1, 2);
+            bindField("Power Up On Last Selected Zone and Channel", powerLast);
+            wl->addLayout(form);
+        } else if (QString::fromLatin1(generalTabs[i]) == "Time-Out Timers") {
+            auto* form = new QGridLayout;
+            form->setHorizontalSpacing(18);
+            form->setVerticalSpacing(8);
+            for (int row = 1; row <= 4; ++row) {
+                form->addWidget(new QLabel(QString("Radio Wide Time Out Timer Row %1 Time:").arg(row)),
+                                row - 1, 0);
+                auto* spin = new QSpinBox;
+                spin->setRange(0, 31);
+                form->addWidget(spin, row - 1, 1);
+                bindField(QString("Radio Wide Time Out Timer Row %1 Time").arg(row).toLatin1().constData(),
+                          spin);
+            }
+            wl->addLayout(form);
+        } else {
+            auto* lbl = new QLabel("This page is not decoded yet.");
+            lbl->setObjectName("muted");
+            wl->addWidget(lbl);
+        }
         wl->addStretch(1);
         addPage(QString::fromLatin1(generalTabs[i]), w, 3, i + 1);
     }
