@@ -21,8 +21,11 @@
 # OpenDepot
 
 Clean-room C++ reimplementation of the ASTRO 25 codeplug layer, with a Dear ImGui
-GUI and a CLI. It reads, edits, creates and writes Motorola ASTRO 25 `.cpg`
-codeplugs, and reads/writes a connected radio over its serial/PPP programming
+GUI. The reusable core and CLI now live in the separate
+[`OpenDepotCore`](../OpenDepotCore) repository; this repository holds the
+desktop GUI (being replaced by Qt 6) plus the reverse-engineering notes and
+tooling. Together they read, edit, create and write Motorola ASTRO 25 `.cpg`
+codeplugs, and read/write a connected radio over its serial/PPP programming
 link — without needing the Depot for the read or the codeplug write.
 
 ## Current state
