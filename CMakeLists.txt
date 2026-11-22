@@ -24,7 +24,16 @@ qt_add_executable(OpenDepot WIN32
     ui/main.cpp
     ui/MainWindow.cpp
     ui/MainWindow.h
-    ui/resources.qrc
+)
+
+qt_add_resources(OpenDepot "app_theme"
+    PREFIX "/"
+    BASE ui
+    FILES ui/theme.qss
+)
+qt_add_resources(OpenDepot "app_icon"
+    PREFIX "/"
+    FILES icon.ico
 )
 if(WIN32)
     file(TO_CMAKE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/icon.ico" ICON_PATH)

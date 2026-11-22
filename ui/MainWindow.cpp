@@ -30,11 +30,15 @@
 #include <QHBoxLayout>
 #include <QHash>
 #include <QHeaderView>
+#include <QIcon>
 #include <QKeySequence>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QPainter>
+#include <QPainterPath>
+#include <QPixmap>
 #include <QPlainTextEdit>
 #include <QProgressDialog>
 #include <QPushButton>
@@ -53,6 +57,7 @@
 #include <QVBoxLayout>
 
 #include <algorithm>
+#include <cmath>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -100,6 +105,256 @@ QString EnumText(const QString& field, uint64_t raw) {
         return raw < 3 ? QString::fromLatin1(values[raw]) : QString();
     }
     return {};
+}
+
+enum class Glyph {
+    Radio, Sliders, List, Wave, Globe, Control, Display, Phone, Shield, Layers, Antenna,
+    Users, Keypad, Scan, Document, Wrench, Gear, Table, Grid, Chat, Star, Diff, Info,
+    Diamond, Folder
+};
+
+QIcon DrawGlyph(Glyph glyph, const QColor& color) {
+    QPixmap pm(18, 18);
+    pm.fill(Qt::transparent);
+    QPainter p(&pm);
+    p.setRenderHint(QPainter::Antialiasing);
+    QPen pen(color, 1.55, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
+    p.setPen(pen);
+    p.setBrush(Qt::NoBrush);
+    const QPointF c(9, 9);
+
+    switch (glyph) {
+    case Glyph::Radio:
+        p.drawRoundedRect(QRectF(2.5, 7, 12, 8), 2, 2);
+        p.drawLine(QPointF(13, 7), QPointF(15, 2.5));
+        p.drawEllipse(QPointF(6, 11), 1.6, 1.6);
+        p.drawLine(QPointF(9.5, 10), QPointF(12, 10));
+        p.drawLine(QPointF(9.5, 12.5), QPointF(12, 12.5));
+        break;
+    case Glyph::Sliders:
+        for (int y : {4, 9, 14}) p.drawLine(QPointF(2.5, y), QPointF(15.5, y));
+        p.drawEllipse(QPointF(6, 4), 1.7, 1.7);
+        p.drawEllipse(QPointF(12, 9), 1.7, 1.7);
+        p.drawEllipse(QPointF(8, 14), 1.7, 1.7);
+        break;
+    case Glyph::List:
+        for (int y : {4, 9, 14}) {
+            p.drawEllipse(QPointF(3.4, y), 1.05, 1.05);
+            p.drawLine(QPointF(6.2, y), QPointF(15.5, y));
+        }
+        break;
+    case Glyph::Wave:
+        p.drawArc(QRectF(1.5, 5, 8, 11), 70 * 16, 150 * 16);
+        p.drawArc(QRectF(4, 3, 11, 14), 70 * 16, 150 * 16);
+        p.drawArc(QRectF(7, 1, 14, 17), 70 * 16, 150 * 16);
+        break;
+    case Glyph::Globe:
+        p.drawEllipse(c, 6.7, 6.7);
+        p.drawEllipse(QRectF(4.5, 2.3, 9, 13.4));
+        p.drawLine(QPointF(2.5, 9), QPointF(15.5, 9));
+        break;
+    case Glyph::Control:
+        p.drawEllipse(QPointF(9, 8), 4.5, 4.5);
+        p.drawEllipse(QPointF(9, 8), 1.3, 1.3);
+        p.drawLine(QPointF(9, 12.5), QPointF(9, 16));
+        p.drawLine(QPointF(5.5, 16), QPointF(12.5, 16));
+        break;
+    case Glyph::Display:
+        p.drawRoundedRect(QRectF(2, 3, 14, 10), 1.5, 1.5);
+        p.drawLine(QPointF(9, 13), QPointF(9, 16));
+        p.drawLine(QPointF(6, 16), QPointF(12, 16));
+        break;
+    case Glyph::Phone:
+        p.drawPath([] {
+            QPainterPath path;
+            path.moveTo(5, 2.5);
+            path.cubicTo(2.5, 5, 4.5, 11, 9.5, 14.5);
+            path.cubicTo(12, 16, 15, 16.5, 16, 13.5);
+            path.lineTo(12.5, 11.5);
+            path.lineTo(10.5, 13);
+            path.cubicTo(8.5, 12, 6.5, 9.5, 6.2, 7);
+            path.lineTo(8.5, 6);
+            path.closeSubpath();
+            return path;
+        }());
+        break;
+    case Glyph::Shield:
+        p.drawPath([] {
+            QPainterPath path;
+            path.moveTo(9, 1.8);
+            path.lineTo(15, 4.3);
+            path.lineTo(15, 9.2);
+            path.cubicTo(15, 13.3, 12.2, 15.6, 9, 16.7);
+            path.cubicTo(5.8, 15.6, 3, 13.3, 3, 9.2);
+            path.lineTo(3, 4.3);
+            path.closeSubpath();
+            return path;
+        }());
+        p.drawLine(QPointF(6.4, 8.7), QPointF(8.3, 10.5));
+        p.drawLine(QPointF(8.3, 10.5), QPointF(12, 6.3));
+        break;
+    case Glyph::Layers:
+        for (int dy : {-4, 0, 4}) {
+            p.drawLine(QPointF(9, 3 + dy), QPointF(15, 6 + dy));
+            p.drawLine(QPointF(15, 6 + dy), QPointF(9, 9 + dy));
+            p.drawLine(QPointF(9, 9 + dy), QPointF(3, 6 + dy));
+            p.drawLine(QPointF(3, 6 + dy), QPointF(9, 3 + dy));
+        }
+        break;
+    case Glyph::Antenna:
+        p.drawLine(QPointF(9, 2.5), QPointF(5.5, 15.5));
+        p.drawLine(QPointF(9, 2.5), QPointF(12.5, 15.5));
+        p.drawLine(QPointF(6.8, 10.5), QPointF(11.2, 10.5));
+        p.drawLine(QPointF(6, 5.5), QPointF(12, 5.5));
+        p.drawLine(QPointF(4.5, 15.5), QPointF(13.5, 15.5));
+        break;
+    case Glyph::Users:
+        p.drawEllipse(QPointF(7, 6), 2.5, 2.5);
+        p.drawEllipse(QPointF(13, 7.2), 1.8, 1.8);
+        p.drawArc(QRectF(2.5, 9, 9, 7), 0, 180 * 16);
+        p.drawArc(QRectF(10.5, 10, 6, 6), 0, 140 * 16);
+        break;
+    case Glyph::Keypad:
+        for (int y = 3; y <= 15; y += 6)
+            for (int x = 3; x <= 15; x += 6) p.drawEllipse(QPointF(x, y), 1.35, 1.35);
+        break;
+    case Glyph::Scan:
+        p.drawEllipse(QPointF(7.6, 7.6), 4.8, 4.8);
+        p.drawLine(QPointF(11.2, 11.2), QPointF(16, 16));
+        p.drawLine(QPointF(5.4, 7.6), QPointF(9.8, 7.6));
+        break;
+    case Glyph::Document:
+        p.drawRoundedRect(QRectF(3.5, 2, 11, 14), 1.4, 1.4);
+        p.drawLine(QPointF(6, 6), QPointF(12, 6));
+        p.drawLine(QPointF(6, 9), QPointF(12, 9));
+        p.drawLine(QPointF(6, 12), QPointF(10, 12));
+        break;
+    case Glyph::Wrench:
+        p.drawLine(QPointF(3.5, 14.5), QPointF(10.5, 7.5));
+        p.drawArc(QRectF(9, 2, 7.5, 7.5), 30 * 16, 210 * 16);
+        p.drawArc(QRectF(2, 10.5, 6, 6), 30 * 16, 210 * 16);
+        break;
+    case Glyph::Gear:
+        p.drawEllipse(c, 4.2, 4.2);
+        for (int i = 0; i < 8; ++i) {
+            const double a = i * 3.14159265358979323846 / 4.0;
+            p.drawLine(QPointF(9 + std::cos(a) * 5, 9 + std::sin(a) * 5),
+                       QPointF(9 + std::cos(a) * 7.2, 9 + std::sin(a) * 7.2));
+        }
+        break;
+    case Glyph::Table:
+        p.drawRoundedRect(QRectF(2, 3, 14, 12), 1.4, 1.4);
+        p.drawLine(QPointF(2, 7), QPointF(16, 7));
+        p.drawLine(QPointF(2, 11), QPointF(16, 11));
+        p.drawLine(QPointF(6, 3), QPointF(6, 15));
+        p.drawLine(QPointF(11, 3), QPointF(11, 15));
+        break;
+    case Glyph::Grid:
+        p.drawRoundedRect(QRectF(2.5, 2.5, 5.2, 5.2), 1, 1);
+        p.drawRoundedRect(QRectF(10.3, 2.5, 5.2, 5.2), 1, 1);
+        p.drawRoundedRect(QRectF(2.5, 10.3, 5.2, 5.2), 1, 1);
+        p.drawRoundedRect(QRectF(10.3, 10.3, 5.2, 5.2), 1, 1);
+        break;
+    case Glyph::Chat:
+        p.drawRoundedRect(QRectF(2, 3, 14, 10), 3, 3);
+        p.drawLine(QPointF(6, 13), QPointF(5, 16));
+        p.drawLine(QPointF(5, 16), QPointF(9, 13));
+        p.drawLine(QPointF(5.5, 8), QPointF(12.5, 8));
+        break;
+    case Glyph::Star:
+        p.drawPath([] {
+            QPainterPath path;
+            for (int i = 0; i < 10; ++i) {
+                const double a = -3.14159265358979323846 / 2 + i * 3.14159265358979323846 / 5;
+                const double r = i % 2 ? 3.4 : 7.0;
+                const QPointF pt(9 + std::cos(a) * r, 9 + std::sin(a) * r);
+                i ? path.lineTo(pt) : path.moveTo(pt);
+            }
+            path.closeSubpath();
+            return path;
+        }());
+        break;
+    case Glyph::Diff:
+        p.drawLine(QPointF(3, 6), QPointF(14, 6));
+        p.drawLine(QPointF(11, 3), QPointF(14, 6));
+        p.drawLine(QPointF(14, 12), QPointF(3, 12));
+        p.drawLine(QPointF(6, 15), QPointF(3, 12));
+        break;
+    case Glyph::Info:
+        p.drawEllipse(c, 6.8, 6.8);
+        p.drawLine(QPointF(9, 8), QPointF(9, 13));
+        p.drawEllipse(QPointF(9, 5.3), 0.9, 0.9);
+        break;
+    case Glyph::Diamond:
+        p.drawLine(QPointF(9, 2), QPointF(16, 9));
+        p.drawLine(QPointF(16, 9), QPointF(9, 16));
+        p.drawLine(QPointF(9, 16), QPointF(2, 9));
+        p.drawLine(QPointF(2, 9), QPointF(9, 2));
+        break;
+    case Glyph::Folder:
+        p.drawPath([] {
+            QPainterPath path;
+            path.moveTo(2, 5);
+            path.lineTo(7, 5);
+            path.lineTo(8.5, 7);
+            path.lineTo(16, 7);
+            path.lineTo(16, 14.5);
+            path.lineTo(2, 14.5);
+            path.closeSubpath();
+            return path;
+        }());
+        break;
+    }
+    return QIcon(pm);
+}
+
+struct GlyphSpec {
+    const char* match;
+    Glyph glyph;
+    const char* color;
+};
+
+QIcon TreeIcon(const QString& text, bool isGroup) {
+    static const GlyphSpec specs[] = {
+        {"Radio Information", Glyph::Info, "#38bdf8"},
+        {"Radio Wide", Glyph::Sliders, "#60a5fa"},
+        {"Test Channel", Glyph::List, "#60a5fa"},
+        {"Narrow Bandwidth", Glyph::Wave, "#38bdf8"},
+        {"NAT", Glyph::Globe, "#38bdf8"},
+        {"Control", Glyph::Control, "#60a5fa"},
+        {"Display", Glyph::Display, "#22d3ee"},
+        {"Menu", Glyph::Display, "#22d3ee"},
+        {"Phone", Glyph::Phone, "#c084fc"},
+        {"Secure", Glyph::Shield, "#fb7185"},
+        {"Encryption", Glyph::Shield, "#fb7185"},
+        {"Conventional", Glyph::Radio, "#34d399"},
+        {"Personality", Glyph::Users, "#34d399"},
+        {"Alias", Glyph::Chat, "#a3e635"},
+        {"MDC", Glyph::Diamond, "#fbbf24"},
+        {"Quick-Call", Glyph::Star, "#fbbf24"},
+        {"DTMF", Glyph::Keypad, "#2dd4bf"},
+        {"MPL", Glyph::List, "#34d399"},
+        {"Scan", Glyph::Scan, "#22d3ee"},
+        {"Zone", Glyph::Layers, "#60a5fa"},
+        {"Trunk", Glyph::Antenna, "#fb923c"},
+        {"Talkgroup", Glyph::Users, "#fb923c"},
+        {"System", Glyph::Gear, "#fb923c"},
+        {"List", Glyph::List, "#94a3b8"},
+        {"Directory", Glyph::Document, "#94a3b8"},
+        {"Tools", Glyph::Wrench, "#cbd5e1"},
+        {"Report", Glyph::Document, "#22d3ee"},
+        {"Doctor", Glyph::Info, "#fb7185"},
+        {"Diff", Glyph::Diff, "#a78bfa"},
+        {"Radio", Glyph::Radio, "#60a5fa"},
+        {"CPS Tables", Glyph::Table, "#38bdf8"},
+        {"Field Catalog", Glyph::Grid, "#38bdf8"},
+    };
+    for (const auto& spec : specs) {
+        if (text.contains(QString::fromLatin1(spec.match), Qt::CaseInsensitive))
+            return DrawGlyph(spec.glyph, QColor(spec.color));
+    }
+    return DrawGlyph(isGroup ? Glyph::Folder : Glyph::Document,
+                    QColor(isGroup ? "#64748b" : "#94a3b8"));
 }
 
 QString HexBytes(const std::vector<uint8_t>& p) {
@@ -235,16 +490,18 @@ void MainWindow::setupMenu() {
 
     auto* bar = addToolBar("Main");
     bar->setMovable(false);
-    auto add = [&](QStyle::StandardPixmap icon, const QString& text, void (MainWindow::*slot)()) {
-        auto* a = bar->addAction(style()->standardIcon(icon), text);
+    bar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    bar->setIconSize(QSize(18, 18));
+    auto add = [&](const QString& text, Glyph glyph, const char* color,
+                   void (MainWindow::*slot)()) {
+        auto* a = bar->addAction(DrawGlyph(glyph, QColor(color)), text);
         connect(a, &QAction::triggered, this, slot);
     };
-    add(QStyle::SP_DialogOpenButton, "Open", &MainWindow::openCodeplug);
-    auto* saveBtn = bar->addAction(style()->standardIcon(QStyle::SP_DialogSaveButton), "Save");
-    connect(saveBtn, &QAction::triggered, this, &MainWindow::saveCodeplug);
+    add("Open", Glyph::Folder, "#38bdf8", &MainWindow::openCodeplug);
+    add("Save", Glyph::Document, "#94a3b8", &MainWindow::saveCodeplug);
     bar->addSeparator();
-    add(QStyle::SP_ArrowDown, "Read Radio", &MainWindow::readRadio);
-    add(QStyle::SP_ArrowUp, "Write Radio", &MainWindow::writeRadio);
+    add("Read Radio", Glyph::Radio, "#34d399", &MainWindow::readRadio);
+    add("Write Radio", Glyph::Radio, "#fb923c", &MainWindow::writeRadio);
 }
 
 void MainWindow::setupUi() {
@@ -255,11 +512,35 @@ void MainWindow::setupUi() {
 
     auto* treePanel = new QWidget;
     treePanel->setObjectName("treePanel");
-    treePanel->setFixedWidth(292);
+    treePanel->setFixedWidth(300);
     auto* tl = new QVBoxLayout(treePanel);
-    tl->setContentsMargins(10, 12, 10, 10);
+    tl->setContentsMargins(14, 18, 14, 12);
     tl->setSpacing(8);
-    auto* heading = new QLabel("Tree View");
+
+    auto* brandRow = new QHBoxLayout;
+    brandRow->setSpacing(11);
+    auto* brandMark = new QLabel("OD");
+    brandMark->setObjectName("brandMark");
+    brandMark->setAlignment(Qt::AlignCenter);
+    brandMark->setFixedSize(36, 36);
+    auto* brandText = new QVBoxLayout;
+    brandText->setSpacing(0);
+    auto* brand = new QLabel("OpenDepot");
+    brand->setObjectName("brand");
+    auto* brandSub = new QLabel("ASTRO 25 WORKSPACE");
+    brandSub->setObjectName("brandSub");
+    brandText->addWidget(brand);
+    brandText->addWidget(brandSub);
+    brandRow->addWidget(brandMark);
+    brandRow->addLayout(brandText, 1);
+    tl->addLayout(brandRow);
+
+    auto* divider = new QFrame;
+    divider->setObjectName("sidebarDivider");
+    divider->setFrameShape(QFrame::HLine);
+    tl->addWidget(divider);
+
+    auto* heading = new QLabel("Codeplug");
     heading->setObjectName("treeHeading");
     tl->addWidget(heading);
 
@@ -310,14 +591,14 @@ void MainWindow::buildTree() {
     tree_->setHeaderHidden(true);
     tree_->setColumnCount(1);
     tree_->setIndentation(16);
-    tree_->setIconSize(QSize(16, 16));
+    tree_->setIconSize(QSize(18, 18));
 
     treeRoot_ = new QTreeWidgetItem(tree_, QStringList{"No codeplug"});
-    treeRoot_->setIcon(0, style()->standardIcon(QStyle::SP_ComputerIcon));
+    treeRoot_->setIcon(0, TreeIcon("Radio", false));
     treeRoot_->setData(0, kRolePage, kInfoPage);
 
     auto* tools = new QTreeWidgetItem(treeRoot_, QStringList{"Tools"});
-    tools->setIcon(0, style()->standardIcon(QStyle::SP_DirIcon));
+    tools->setIcon(0, TreeIcon("Tools", true));
     tools->setData(0, kRolePage, -1);
     struct ToolItem {
         const char* name;
@@ -331,7 +612,7 @@ void MainWindow::buildTree() {
                                   {"Field Catalog", kCatalogPage}};
     for (const auto& t : toolItems) {
         auto* it = new QTreeWidgetItem(tools, QStringList{QString::fromLatin1(t.name)});
-        it->setIcon(0, style()->standardIcon(QStyle::SP_FileIcon));
+        it->setIcon(0, TreeIcon(QString::fromLatin1(t.name), false));
         it->setData(0, kRolePage, t.page);
     }
 
@@ -370,7 +651,7 @@ void MainWindow::buildModelTree() {
         QTreeWidgetItem* gi = groups.value(group);
         if (!gi) {
             gi = new QTreeWidgetItem(treeRoot_, QStringList{group});
-            gi->setIcon(0, style()->standardIcon(QStyle::SP_DirIcon));
+            gi->setIcon(0, TreeIcon(group, true));
             gi->setData(0, kRolePage, -1);
             groups.insert(group, gi);
         }
@@ -378,7 +659,8 @@ void MainWindow::buildModelTree() {
         if (s.records.size() != 1)
             label += QString("  (%1)").arg(static_cast<int>(s.records.size()));
         auto* it = new QTreeWidgetItem(gi, QStringList{label});
-        it->setIcon(0, style()->standardIcon(QStyle::SP_FileIcon));
+        it->setIcon(0, TreeIcon(label, false));
+
         int page = kSectionPage;
         if (s.id == "radio_information") {
             page = kInfoPage;
@@ -395,7 +677,7 @@ void MainWindow::buildModelTree() {
     }
 
     auto* tools = new QTreeWidgetItem(treeRoot_, QStringList{"Tools"});
-    tools->setIcon(0, style()->standardIcon(QStyle::SP_DirIcon));
+
     tools->setData(0, kRolePage, -1);
     struct ToolItem {
         const char* name;
@@ -409,7 +691,7 @@ void MainWindow::buildModelTree() {
                                   {"Field Catalog", kCatalogPage}};
     for (const auto& t : toolItems) {
         auto* it = new QTreeWidgetItem(tools, QStringList{QString::fromLatin1(t.name)});
-        it->setIcon(0, style()->standardIcon(QStyle::SP_FileIcon));
+        it->setIcon(0, TreeIcon(QString::fromLatin1(t.name), false));
         it->setData(0, kRolePage, t.page);
     }
     tree_->expandAll();
@@ -1408,8 +1690,6 @@ void MainWindow::fillCpsTable(int tableIndex) {
     const QString key = QString::fromUtf8(table.key);
     if (key == "zone_channel_assignment" && model_) {
         int rows = 0;
-        int rxSeen = 0;
-        int txSeen = 0;
         for (const auto& zone : model_->Zones()) {
             for (const auto& channel : zone.channels) {
                 const int row = cpsGrid_->rowCount();
@@ -1423,11 +1703,17 @@ void MainWindow::fillCpsTable(int tableIndex) {
                     if (name == "Channel Name") {
                         value = QString::fromStdString(channel.name);
                         assigned = true;
-                    } else if (name == "Receive Frequency" && rxSeen++ == 0) {
+                    } else if (name == "Receive Frequency") {
                         value = QString::number(channel.rxMHz, 'f', 5);
                         assigned = true;
-                    } else if (name == "Transmit Frequency" && txSeen++ == 0) {
+                    } else if (name == "Transmit Frequency") {
                         value = QString::number(channel.txMHz, 'f', 5);
+                        assigned = true;
+                    } else if (name == "TA Frequency") {
+                        value = QString::number(channel.txMHz, 'f', 5);
+                        assigned = true;
+                    } else if (name == "Personality #") {
+                        value = QString::number(channel.channelId);
                         assigned = true;
                     } else if (name == "Receive Squelch Type") {
                         value = QString::number(channel.squelchRx);
@@ -1557,9 +1843,10 @@ void MainWindow::fillCpsTable(int tableIndex) {
                     const auto& bind = column.bindings[0];
                     const uint64_t raw = opendepot::ReadFieldBits(
                         node->payload.data(), node->payload.size(), bind.off, bind.bits, bind.msb);
-                    cpsGrid_->setItem(row, int(c),
-                                      new QTableWidgetItem(QString::number(
-                                          static_cast<qulonglong>(raw))));
+                    QString value = EnumText(name, raw);
+                    if (value.isEmpty())
+                        value = QString::number(static_cast<qulonglong>(raw));
+                    cpsGrid_->setItem(row, int(c), new QTableWidgetItem(value));
                 }
             }
             info += " - 1 NAT row";
