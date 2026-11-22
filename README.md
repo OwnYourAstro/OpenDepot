@@ -78,8 +78,9 @@ Not implemented:
   is fixed by the ISH directory).
 - Named Radio Configuration forms (Radio Wide tabs, Controls, Keypad, Display &
   Menu); those sections currently open the raw record/plain-text editor.
-- Field-level names for every radio-wide/personality/trunking byte; see
-  `docs/CPS_MODEL.md` and `docs/CODEPLUG_TAGS.md`.
+- Enum/option value semantics and the remaining 420 unnamed structural fields;
+  field names, offsets, and 124/140 table bindings are extracted in
+  `docs/codeplug_field_schema.json` and `docs/CODEPLUG_TABLE_BINDINGS.md`.
 - Create wizard, FLASHcode editor, and passcode/backup screens in the GUI.
 - Any firmware/boot flash. A radio that failed a firmware flash cannot be
   recovered here.
@@ -132,6 +133,10 @@ CPS model.
   shows every byte as plain text (offset, hex, U8, U16, U32, ASCII; double-click
   U8 to edit), and accepts whole-payload hex edits.
 - **Export Plain Text** - dumps every section, record and byte to a `.txt`.
+- **CPS Tables** - CPS-style table pages; Zone Channel Assignment, message/status
+  aliases and radio configuration features are populated from the model.
+- **Field Catalog** - lists the 18 CPS tables and all 140 columns with bound
+  field IDs, names, groups, offsets, bit counts and MSBs (124/140 bound).
 - **Service Report**, **Codeplug Doctor**, **Codeplug Diff**, **Records**.
 - **Radio** - serial-port picker (auto-detected, refresh, remembers the last
   port, editable for unlisted ports), native Read/Write with a busy dialog and a

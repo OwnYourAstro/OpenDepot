@@ -4,6 +4,7 @@
 #pragma once
 
 #include <QDateTime>
+#include <QHash>
 #include <QMainWindow>
 #include <QString>
 
@@ -90,6 +91,10 @@ private:
     QWidget* buildRadioInfoPage();
     QWidget* buildZonesPage();
     QWidget* buildRadioWidePage();
+    QWidget* buildFieldCatalogPage();
+    void fillFieldCatalog(int tableIndex);
+    QWidget* buildCpsTablesPage();
+    void fillCpsTable(int tableIndex);
     QWidget* buildSectionPage();
     void refreshRadioWidePage();
     void setMaxChannels(int value);
@@ -129,7 +134,14 @@ private:
     QWidget* chips_ = nullptr;
     QGridLayout* chipsLayout_ = nullptr;
     QTableWidget* zones_ = nullptr;
+    QTableWidget* catalogTables_ = nullptr;
+    QTableWidget* catalogColumns_ = nullptr;
+    QTableWidget* cpsTableList_ = nullptr;
+    QTableWidget* cpsGrid_ = nullptr;
+    QLabel* cpsTableInfo_ = nullptr;
     QSpinBox* rwMaxChannels_ = nullptr;
+    QHash<QString, QWidget*> rwBound_;
+    QTableWidget* rwNamedFields_ = nullptr;
     QLineEdit* zoneNameEdit_ = nullptr;
     QLineEdit* channelNameEdit_ = nullptr;
     QLineEdit* rxEdit_ = nullptr;
@@ -149,6 +161,7 @@ private:
     QPlainTextEdit* sectionDetail_ = nullptr;
     QPlainTextEdit* sectionHex_ = nullptr;
     QTableWidget* sectionFields_ = nullptr;
+    QTableWidget* sectionNamed_ = nullptr;
     QTableWidget* sectionNames_ = nullptr;
     QLineEdit* sectionNameEdit_ = nullptr;
     QPushButton* sectionApplyNames_ = nullptr;

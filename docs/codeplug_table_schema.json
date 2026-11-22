@@ -1,0 +1,4712 @@
+{
+  "source": "C:\\ProgramData\\Motorola\\PatPort\\Configure\\Table",
+  "field_schema": "docs\\codeplug_field_schema.json",
+  "format": "Rui/CgIsh table definition (CArchive-like grid columns)",
+  "generated_by": "OpenDepotCore/tools/parse_table_defs.py",
+  "table_count": 18,
+  "column_count": 140,
+  "text_column_count": 124,
+  "checkbox_column_count": 16,
+  "tables_with_layout_rows": 5,
+  "has_codeplug_bit_offsets": false,
+  "tables": [
+    {
+      "key": "trunking_astro_channel_id",
+      "title": "ASTRO 25 Channel ID Table in Trunking System",
+      "file": "ASTRO 25 Channel ID Table in Trunking System.tbl",
+      "size": 554,
+      "sha256": "5c9e2b19b4eee1527a4a319cb4b52cb2a8391743a1e94d69b89940315bf38fbb",
+      "block_id": 152,
+      "block_name": "Trk Sys Apco Channel Identifier List Block",
+      "core_section": "trunking_system",
+      "core_section_tags": [
+        "0x003A",
+        "0x003B",
+        "0x003C",
+        "0x003D",
+        "0x003E",
+        "0x003F",
+        "0x0FE6"
+      ],
+      "mapping_confidence": "inferred",
+      "column_count": 6,
+      "text_column_count": 5,
+      "checkbox_column_count": 1,
+      "layout_rows": 1,
+      "layout_groups": 1,
+      "duplicate_column_names": [],
+      "columns": [
+        {
+          "index": 0,
+          "name": "Identifier Enable",
+          "name_raw": "Identifier Enable",
+          "control": "checkbox",
+          "value_type": "bool",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 153,
+          "type_code": 4,
+          "width": 46,
+          "offset": 85,
+          "bindings": [
+            {
+              "fid": 13406,
+              "group": "0xede52f0",
+              "off": 2,
+              "bits": 1,
+              "msb": 6,
+              "table_score": 6,
+              "block_id": 195,
+              "block_name": "Trunking  Personality  Floating Data Block"
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 1,
+          "name": "Channel Bandwidth (kHz)",
+          "name_raw": "Channel Bandwidth (kHz)",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 65,
+          "offset": 156,
+          "bindings": [
+            {
+              "fid": 11255,
+              "group": "0xede52f0",
+              "off": 0,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 6,
+              "block_id": 195,
+              "block_name": "Trunking  Personality  Floating Data Block"
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 2,
+          "name": "Transmit Offset Sign",
+          "name_raw": "Transmit Offset Sign",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 60,
+          "offset": 236,
+          "bindings": [
+            {
+              "fid": 11306,
+              "group": "0xede52f0",
+              "off": 2,
+              "bits": 1,
+              "msb": 7,
+              "table_score": 6,
+              "block_id": 195,
+              "block_name": "Trunking  Personality  Floating Data Block"
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 3,
+          "name": "Transmit Offset (MHz)",
+          "name_raw": "Transmit Offset (MHz)",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 60,
+          "offset": 313,
+          "bindings": [
+            {
+              "fid": 11256,
+              "group": "0xede52f0",
+              "off": 2,
+              "bits": 13,
+              "msb": 4,
+              "table_score": 6,
+              "block_id": 195,
+              "block_name": "Trunking  Personality  Floating Data Block"
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 4,
+          "name": "Channel Spacing (kHz)",
+          "name_raw": "Channel Spacing (kHz)",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 59,
+          "offset": 391,
+          "bindings": [
+            {
+              "fid": 11257,
+              "group": "0xede52f0",
+              "off": 4,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 6,
+              "block_id": 195,
+              "block_name": "Trunking  Personality  Floating Data Block"
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 5,
+          "name": "Base Frequency (MHz)",
+          "name_raw": "Base Frequency (MHz)",
+          "control": "text",
+          "value_type": "string",
+          "flags": 4,
+          "flags_hex": "0x0004",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 62,
+          "offset": 469,
+          "bindings": [
+            {
+              "fid": 11258,
+              "group": "0xede52f0",
+              "off": 6,
+              "bits": 32,
+              "msb": 7,
+              "table_score": 6,
+              "block_id": 195,
+              "block_name": "Trunking  Personality  Floating Data Block"
+            }
+          ],
+          "match": "bound"
+        }
+      ],
+      "primary_group": "0xede52f0",
+      "primary_group_columns": 6,
+      "matched_groups": [
+        {
+          "group": "0xede52f0",
+          "columns": 6,
+          "fields": 6,
+          "unique_names": 6,
+          "group_coverage": 1.0
+        },
+        {
+          "group": "0x107feb08",
+          "columns": 2,
+          "fields": 7,
+          "unique_names": 7,
+          "group_coverage": 0.286
+        },
+        {
+          "group": "0xede4840",
+          "columns": 1,
+          "fields": 109,
+          "unique_names": 109,
+          "group_coverage": 0.009
+        },
+        {
+          "group": "0xebe7710",
+          "columns": 1,
+          "fields": 5,
+          "unique_names": 5,
+          "group_coverage": 0.2
+        }
+      ],
+      "bound_column_count": 6,
+      "ambiguous_column_count": 0,
+      "missing_column_count": 0,
+      "binding_coverage": 1.0,
+      "primary_block_id": 195,
+      "primary_block_name": "Trunking  Personality  Floating Data Block"
+    },
+    {
+      "key": "trunking_astro_site_alias",
+      "title": "ASTRO 25 Site Alias Table in Trunking System",
+      "file": "ASTRO 25 Site Alias Table in Trunking System.tbl",
+      "size": 508,
+      "sha256": "1b41909e5e9a0adab5453769ec7661b8fed0058dfe68fe63e55f85b1d0ab03b7",
+      "block_id": 117,
+      "block_name": "Trk Site Alias Block",
+      "core_section": "trunking_system",
+      "core_section_tags": [
+        "0x0FE6"
+      ],
+      "mapping_confidence": "inferred",
+      "column_count": 6,
+      "text_column_count": 6,
+      "checkbox_column_count": 0,
+      "layout_rows": 0,
+      "layout_groups": 0,
+      "duplicate_column_names": [],
+      "columns": [
+        {
+          "index": 0,
+          "name": "Rfss Alias Num",
+          "name_raw": "Rfss Alias Num",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 60,
+          "offset": 85,
+          "bindings": [
+            {
+              "fid": 11162,
+              "group": "0xf19c420",
+              "off": 0,
+              "bits": 8,
+              "msb": 7,
+              "table_score": 5,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 1,
+          "name": "Site Alias Num",
+          "name_raw": "Site Alias Num",
+          "control": "text",
+          "value_type": "string",
+          "flags": 4,
+          "flags_hex": "0x0004",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 51,
+          "offset": 156,
+          "bindings": [
+            {
+              "fid": 11163,
+              "group": "0xf19c420",
+              "off": 1,
+              "bits": 8,
+              "msb": 7,
+              "table_score": 5,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 2,
+          "name": "Site Alias Txt",
+          "name_raw": "Site Alias Txt",
+          "control": "text",
+          "value_type": "string",
+          "flags": 4,
+          "flags_hex": "0x0004",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 51,
+          "offset": 227,
+          "bindings": [
+            {
+              "fid": 11164,
+              "group": "0xf19ca50",
+              "off": 0,
+              "bits": 136,
+              "msb": 7,
+              "table_score": 1,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 3,
+          "name": "Site Alias Type",
+          "name_raw": "Site Alias Type",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 70,
+          "offset": 298,
+          "bindings": [
+            {
+              "fid": 13867,
+              "group": "0xf19c420",
+              "off": 8,
+              "bits": 2,
+              "msb": 1,
+              "table_score": 5,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 4,
+          "name": "WACN ID",
+          "name_raw": "WACN ID",
+          "control": "text",
+          "value_type": "string",
+          "flags": 4,
+          "flags_hex": "0x0004",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 70,
+          "offset": 370,
+          "bindings": [
+            {
+              "fid": 13868,
+              "group": "0xf19c420",
+              "off": 4,
+              "bits": 32,
+              "msb": 7,
+              "table_score": 5,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 5,
+          "name": "System ID",
+          "name_raw": "System ID",
+          "control": "text",
+          "value_type": "string",
+          "flags": 4,
+          "flags_hex": "0x0004",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 70,
+          "offset": 434,
+          "bindings": [
+            {
+              "fid": 13833,
+              "group": "0xf19c420",
+              "off": 2,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 5,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        }
+      ],
+      "primary_group": "0xf19c420",
+      "primary_group_columns": 5,
+      "matched_groups": [
+        {
+          "group": "0xf19c420",
+          "columns": 5,
+          "fields": 5,
+          "unique_names": 5,
+          "group_coverage": 1.0
+        },
+        {
+          "group": "0x107feb08",
+          "columns": 2,
+          "fields": 7,
+          "unique_names": 7,
+          "group_coverage": 0.286
+        },
+        {
+          "group": "0x107fe9e8",
+          "columns": 2,
+          "fields": 2,
+          "unique_names": 2,
+          "group_coverage": 1.0
+        },
+        {
+          "group": "0xede4840",
+          "columns": 1,
+          "fields": 109,
+          "unique_names": 109,
+          "group_coverage": 0.009
+        },
+        {
+          "group": "0xebe8d90",
+          "columns": 1,
+          "fields": 6,
+          "unique_names": 6,
+          "group_coverage": 0.167
+        },
+        {
+          "group": "0xf19cc90",
+          "columns": 1,
+          "fields": 5,
+          "unique_names": 5,
+          "group_coverage": 0.2
+        },
+        {
+          "group": "0xf19ca50",
+          "columns": 1,
+          "fields": 1,
+          "unique_names": 1,
+          "group_coverage": 1.0
+        }
+      ],
+      "bound_column_count": 6,
+      "ambiguous_column_count": 0,
+      "missing_column_count": 0,
+      "binding_coverage": 1.0,
+      "primary_block_id": null,
+      "primary_block_name": null
+    },
+    {
+      "key": "zone_channel_assignment",
+      "title": "Channel List Table in Zone Channel Assignment",
+      "file": "Channel List Table in Zone Channel Assignment.tbl",
+      "size": 3485,
+      "sha256": "a03527f2f39c5127dad6302a1fb2dba50e65c620d6a689450a691bc950b87727",
+      "block_id": 45,
+      "block_name": "Zone Channel Assignment",
+      "core_section": "zone_channel_assignment",
+      "core_section_tags": [
+        "0x000D",
+        "0x0FFC",
+        "0x0FFD",
+        "0x0FFE",
+        "0x0FFF"
+      ],
+      "mapping_confidence": "inferred",
+      "column_count": 47,
+      "text_column_count": 36,
+      "checkbox_column_count": 11,
+      "layout_rows": 0,
+      "layout_groups": 0,
+      "duplicate_column_names": [
+        "Receive Frequency",
+        "TA Frequency",
+        "Transmit Frequency"
+      ],
+      "columns": [
+        {
+          "index": 0,
+          "name": "Active Channel",
+          "name_raw": "Active Channel",
+          "control": "checkbox",
+          "value_type": "bool",
+          "flags": 32,
+          "flags_hex": "0x0020",
+          "format_code": 153,
+          "type_code": 4,
+          "width": 40,
+          "offset": 85,
+          "bindings": [
+            {
+              "fid": 11557,
+              "group": "0xf1a7ac0",
+              "off": 23,
+              "bits": 1,
+              "msb": 5,
+              "table_score": 24,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 1,
+          "name": "Channel Name",
+          "name_raw": "Channel Name",
+          "control": "text",
+          "value_type": "string",
+          "flags": 4,
+          "flags_hex": "0x0004",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 39,
+          "offset": 153,
+          "bindings": [
+            {
+              "fid": 11518,
+              "group": "0xf1a67a0",
+              "off": 0,
+              "bits": 136,
+              "msb": 7,
+              "table_score": 1,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 2,
+          "name": "Channel Announcement",
+          "name_raw": "Channel Announcement",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 70,
+          "offset": 222,
+          "bindings": [
+            {
+              "fid": 11570,
+              "group": "0xf1a7ac0",
+              "off": 27,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 24,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 3,
+          "name": "Personality Type",
+          "name_raw": "Personality Type",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 48,
+          "offset": 299,
+          "bindings": [
+            {
+              "fid": 11501,
+              "group": "0xf1a77f0",
+              "off": 0,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 2,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 4,
+          "name": "Personality #",
+          "name_raw": "Personality #",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 39,
+          "offset": 372,
+          "bindings": [
+            {
+              "fid": 11515,
+              "group": "0xf1a77f0",
+              "off": 2,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 2,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 5,
+          "name": "Talkgroup #",
+          "name_raw": "Talkgroup #",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 35,
+          "offset": 442,
+          "bindings": [
+            {
+              "fid": 10672,
+              "group": "0xebe8be0",
+              "off": 0,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 2,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 6,
+          "name": "TalkGroup",
+          "name_raw": "TalkGroup",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 30,
+          "offset": 510,
+          "bindings": [
+            {
+              "fid": 10672,
+              "group": "0xebe8be0",
+              "off": 0,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 2,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 7,
+          "name": "Strapping",
+          "name_raw": "Strapping",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 30,
+          "offset": 576,
+          "match": "missing",
+          "bindings": []
+        },
+        {
+          "index": 8,
+          "name": "User Selectable PL (MPL)",
+          "name_raw": "User Selectable PL (MPL)",
+          "control": "checkbox",
+          "value_type": "bool",
+          "flags": 4,
+          "flags_hex": "0x0004",
+          "format_code": 153,
+          "type_code": 4,
+          "width": 65,
+          "offset": 642,
+          "bindings": [
+            {
+              "fid": 11586,
+              "group": "0xf1a7ac0",
+              "off": 23,
+              "bits": 1,
+              "msb": 3,
+              "table_score": 24,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 9,
+          "name": "Receive Frequency",
+          "name_raw": "Receive Frequency",
+          "control": "text",
+          "value_type": "string",
+          "flags": 4,
+          "flags_hex": "0x0004",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 51,
+          "offset": 720,
+          "bindings": [
+            {
+              "fid": 11531,
+              "group": "0xf1a7ac0",
+              "off": 12,
+              "bits": 32,
+              "msb": 7,
+              "table_score": 24,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 10,
+          "name": "Receive Frequency",
+          "name_raw": "Receive Frequency",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 51,
+          "offset": 794,
+          "bindings": [
+            {
+              "fid": 11531,
+              "group": "0xf1a7ac0",
+              "off": 12,
+              "bits": 32,
+              "msb": 7,
+              "table_score": 24,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 11,
+          "name": "Receive Squelch Type",
+          "name_raw": "Receive Squelch Type",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 60,
+          "offset": 868,
+          "bindings": [
+            {
+              "fid": 11538,
+              "group": "0xf1a7ac0",
+              "off": 21,
+              "bits": 1,
+              "msb": 7,
+              "table_score": 24,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 12,
+          "name": "Receive PL Freq",
+          "name_raw": "Receive PL Freq",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 45,
+          "offset": 945,
+          "match": "missing",
+          "bindings": []
+        },
+        {
+          "index": 13,
+          "name": "Receive PL Code",
+          "name_raw": "Receive PL Code",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 46,
+          "offset": 1017,
+          "match": "missing",
+          "bindings": []
+        },
+        {
+          "index": 14,
+          "name": "Receive DPL Code",
+          "name_raw": "Receive DPL Code",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 50,
+          "offset": 1089,
+          "bindings": [
+            {
+              "fid": 11535,
+              "group": "0xf1a7ac0",
+              "off": 21,
+              "bits": 7,
+              "msb": 6,
+              "table_score": 24,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 15,
+          "name": "Receive DPL Invert",
+          "name_raw": "Receive DPL Invert",
+          "control": "checkbox",
+          "value_type": "bool",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 153,
+          "type_code": 4,
+          "width": 54,
+          "offset": 1162,
+          "bindings": [
+            {
+              "fid": 11533,
+              "group": "0xf1a7ac0",
+              "off": 23,
+              "bits": 1,
+              "msb": 0,
+              "table_score": 24,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 16,
+          "name": "Transmit Frequency",
+          "name_raw": "Transmit Frequency",
+          "control": "text",
+          "value_type": "string",
+          "flags": 4,
+          "flags_hex": "0x0004",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 51,
+          "offset": 1234,
+          "bindings": [
+            {
+              "fid": 11532,
+              "group": "0xf1a7ac0",
+              "off": 8,
+              "bits": 32,
+              "msb": 7,
+              "table_score": 24,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 17,
+          "name": "Transmit Frequency",
+          "name_raw": "Transmit Frequency",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 51,
+          "offset": 1309,
+          "bindings": [
+            {
+              "fid": 11532,
+              "group": "0xf1a7ac0",
+              "off": 8,
+              "bits": 32,
+              "msb": 7,
+              "table_score": 24,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 18,
+          "name": "Transmit Squelch Type",
+          "name_raw": "Transmit Squelch Type",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 60,
+          "offset": 1384,
+          "bindings": [
+            {
+              "fid": 11542,
+              "group": "0xf1a7ac0",
+              "off": 20,
+              "bits": 1,
+              "msb": 7,
+              "table_score": 24,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 19,
+          "name": "Transmit PL Freq",
+          "name_raw": "Transmit PL Freq",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 43,
+          "offset": 1462,
+          "match": "missing",
+          "bindings": []
+        },
+        {
+          "index": 20,
+          "name": "Transmit PL Code",
+          "name_raw": "Transmit PL Code",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 48,
+          "offset": 1535,
+          "match": "missing",
+          "bindings": []
+        },
+        {
+          "index": 21,
+          "name": "Transmit DPL Code",
+          "name_raw": "Transmit DPL Code",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 53,
+          "offset": 1608,
+          "bindings": [
+            {
+              "fid": 11539,
+              "group": "0xf1a7ac0",
+              "off": 20,
+              "bits": 7,
+              "msb": 6,
+              "table_score": 24,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 22,
+          "name": "Transmit DPL Invert",
+          "name_raw": "Transmit DPL Invert",
+          "control": "checkbox",
+          "value_type": "bool",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 153,
+          "type_code": 4,
+          "width": 52,
+          "offset": 1682,
+          "bindings": [
+            {
+              "fid": 11534,
+              "group": "0xf1a7ac0",
+              "off": 23,
+              "bits": 1,
+              "msb": 1,
+              "table_score": 24,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 23,
+          "name": "PL Deviation",
+          "name_raw": "PL Deviation",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 37,
+          "offset": 1755,
+          "bindings": [
+            {
+              "fid": 11569,
+              "group": "0xf1a7ac0",
+              "off": 1,
+              "bits": 4,
+              "msb": 7,
+              "table_score": 24,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 24,
+          "name": "Tx Opt Transmit Dev",
+          "name_raw": "Tx Opt Transmit Dev",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 55,
+          "offset": 1824,
+          "bindings": [
+            {
+              "fid": 11543,
+              "group": "0xf1a7ac0",
+              "off": 1,
+              "bits": 2,
+              "msb": 1,
+              "table_score": 24,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 25,
+          "name": "Tx Opt Transmit Dev T/A",
+          "name_raw": "Tx Opt Transmit Dev T/A",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 66,
+          "offset": 1900,
+          "bindings": [
+            {
+              "fid": 11544,
+              "group": "0xf1a7ac0",
+              "off": 1,
+              "bits": 2,
+              "msb": 3,
+              "table_score": 24,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 26,
+          "name": "Tx Opt Channel Spacing",
+          "name_raw": "Tx Opt Channel Spacing",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 66,
+          "offset": 1980,
+          "bindings": [
+            {
+              "fid": 11545,
+              "group": "0xf1a7ac0",
+              "off": 0,
+              "bits": 8,
+              "msb": 7,
+              "table_score": 24,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 27,
+          "name": "TA Direct/Talkaround",
+          "name_raw": "TA Direct/Talkaround",
+          "control": "checkbox",
+          "value_type": "bool",
+          "flags": 4,
+          "flags_hex": "0x0004",
+          "format_code": 153,
+          "type_code": 4,
+          "width": 56,
+          "offset": 2059,
+          "bindings": [
+            {
+              "fid": 11548,
+              "group": "0xf1a7ac0",
+              "off": 23,
+              "bits": 1,
+              "msb": 6,
+              "table_score": 24,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 28,
+          "name": "TA Frequency",
+          "name_raw": "TA Frequency",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 40,
+          "offset": 2133,
+          "bindings": [
+            {
+              "fid": 11546,
+              "group": "0xf1a7ac0",
+              "off": 16,
+              "bits": 32,
+              "msb": 7,
+              "table_score": 24,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 29,
+          "name": "TA Frequency",
+          "name_raw": "TA Frequency",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 40,
+          "offset": 2202,
+          "bindings": [
+            {
+              "fid": 11546,
+              "group": "0xf1a7ac0",
+              "off": 16,
+              "bits": 32,
+              "msb": 7,
+              "table_score": 24,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 30,
+          "name": "TA Squelch Type",
+          "name_raw": "TA Squelch Type",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 47,
+          "offset": 2271,
+          "bindings": [
+            {
+              "fid": 11552,
+              "group": "0xf1a7ac0",
+              "off": 22,
+              "bits": 1,
+              "msb": 7,
+              "table_score": 24,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 31,
+          "name": "TA PL Frequency",
+          "name_raw": "TA PL Frequency",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 50,
+          "offset": 2343,
+          "match": "missing",
+          "bindings": []
+        },
+        {
+          "index": 32,
+          "name": "TA PL Code",
+          "name_raw": "TA PL Code",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 37,
+          "offset": 2415,
+          "match": "missing",
+          "bindings": []
+        },
+        {
+          "index": 33,
+          "name": "TA DPL Code",
+          "name_raw": "TA DPL Code",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 42,
+          "offset": 2482,
+          "bindings": [
+            {
+              "fid": 11549,
+              "group": "0xf1a7ac0",
+              "off": 22,
+              "bits": 7,
+              "msb": 6,
+              "table_score": 24,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 34,
+          "name": "TA DPL Invert",
+          "name_raw": "TA DPL Invert",
+          "control": "checkbox",
+          "value_type": "bool",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 153,
+          "type_code": 4,
+          "width": 42,
+          "offset": 2550,
+          "bindings": [
+            {
+              "fid": 11547,
+              "group": "0xf1a7ac0",
+              "off": 23,
+              "bits": 1,
+              "msb": 2,
+              "table_score": 24,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 35,
+          "name": "Direct Network ID",
+          "name_raw": "Direct Network ID",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 46,
+          "offset": 2617,
+          "bindings": [
+            {
+              "fid": 11528,
+              "group": "0xf1a7ac0",
+              "off": 6,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 24,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 36,
+          "name": "Tx Network ID",
+          "name_raw": "Tx Network ID",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 40,
+          "offset": 2691,
+          "bindings": [
+            {
+              "fid": 11529,
+              "group": "0xf1a7ac0",
+              "off": 2,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 24,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 37,
+          "name": "Rx Network ID",
+          "name_raw": "Rx Network ID",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 40,
+          "offset": 2761,
+          "bindings": [
+            {
+              "fid": 11530,
+              "group": "0xf1a7ac0",
+              "off": 4,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 24,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 38,
+          "name": "Sector ID",
+          "name_raw": "Sector ID",
+          "control": "text",
+          "value_type": "string",
+          "flags": 0,
+          "flags_hex": "0x0000",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 35,
+          "offset": 2831,
+          "bindings": [
+            {
+              "fid": 11568,
+              "group": "0xf1a7ac0",
+              "off": 24,
+              "bits": 8,
+              "msb": 7,
+              "table_score": 24,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 39,
+          "name": "Rx Only",
+          "name_raw": "Rx Only ",
+          "control": "checkbox",
+          "value_type": "bool",
+          "flags": 32,
+          "flags_hex": "0x0020",
+          "format_code": 153,
+          "type_code": 4,
+          "width": 24,
+          "offset": 2897,
+          "match": "missing",
+          "bindings": []
+        },
+        {
+          "index": 40,
+          "name": "Rx Voice/Signal Type",
+          "name_raw": "Rx Voice/Signal Type ",
+          "control": "text",
+          "value_type": "string",
+          "flags": 32,
+          "flags_hex": "0x0020",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 35,
+          "offset": 2959,
+          "bindings": [
+            {
+              "fid": 4539,
+              "group": "0x40aa9d8",
+              "off": 26,
+              "bits": 2,
+              "msb": 3,
+              "table_score": 6,
+              "block_id": 187,
+              "block_name": "Conventional Button Config List"
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 41,
+          "name": "Surveillance Mode",
+          "name_raw": "Surveillance Mode ",
+          "control": "checkbox",
+          "value_type": "bool",
+          "flags": 32,
+          "flags_hex": "0x0020",
+          "format_code": 153,
+          "type_code": 4,
+          "width": 35,
+          "offset": 3037,
+          "bindings": [
+            {
+              "fid": 4540,
+              "group": "0x40aa9d8",
+              "off": 5,
+              "bits": 1,
+              "msb": 1,
+              "table_score": 6,
+              "block_id": 187,
+              "block_name": "Conventional Button Config List"
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 42,
+          "name": "Adaptive Power",
+          "name_raw": "Adaptive Power ",
+          "control": "checkbox",
+          "value_type": "bool",
+          "flags": 32,
+          "flags_hex": "0x0020",
+          "format_code": 153,
+          "type_code": 4,
+          "width": 35,
+          "offset": 3109,
+          "bindings": [
+            {
+              "fid": 4501,
+              "group": "0x40aa9d8",
+              "off": 23,
+              "bits": 1,
+              "msb": 3,
+              "table_score": 6,
+              "block_id": 187,
+              "block_name": "Conventional Button Config List"
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 43,
+          "name": "Secure/Clear Strapping",
+          "name_raw": "Secure/Clear Strapping ",
+          "control": "text",
+          "value_type": "string",
+          "flags": 32,
+          "flags_hex": "0x0020",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 35,
+          "offset": 3178,
+          "bindings": [
+            {
+              "fid": 4686,
+              "group": "0x40aa9d8",
+              "off": 10,
+              "bits": 2,
+              "msb": 1,
+              "table_score": 6,
+              "block_id": 187,
+              "block_name": "Conventional Button Config List"
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 44,
+          "name": "Fireground Enable",
+          "name_raw": "Fireground Enable ",
+          "control": "checkbox",
+          "value_type": "bool",
+          "flags": 32,
+          "flags_hex": "0x0020",
+          "format_code": 153,
+          "type_code": 4,
+          "width": 35,
+          "offset": 3258,
+          "bindings": [
+            {
+              "fid": 4713,
+              "group": "0x40aa9d8",
+              "off": 26,
+              "bits": 1,
+              "msb": 0,
+              "table_score": 6,
+              "block_id": 187,
+              "block_name": "Conventional Button Config List"
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 45,
+          "name": "Fireground Registration",
+          "name_raw": "Fireground Registration ",
+          "control": "checkbox",
+          "value_type": "bool",
+          "flags": 32,
+          "flags_hex": "0x0020",
+          "format_code": 153,
+          "type_code": 4,
+          "width": 35,
+          "offset": 3330,
+          "bindings": [
+            {
+              "fid": 4715,
+              "group": "0x40aa9d8",
+              "off": 27,
+              "bits": 1,
+              "msb": 7,
+              "table_score": 6,
+              "block_id": 187,
+              "block_name": "Conventional Button Config List"
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 46,
+          "name": "System Type",
+          "name_raw": "System Type ",
+          "control": "text",
+          "value_type": "string",
+          "flags": 32,
+          "flags_hex": "0x0020",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 35,
+          "offset": 3408,
+          "match": "missing",
+          "bindings": []
+        }
+      ],
+      "primary_group": "0xf1a7ac0",
+      "primary_group_columns": 24,
+      "matched_groups": [
+        {
+          "group": "0xf1a7ac0",
+          "columns": 24,
+          "fields": 27,
+          "unique_names": 27,
+          "group_coverage": 0.889
+        },
+        {
+          "group": "0x40aa9d8",
+          "columns": 6,
+          "fields": 111,
+          "unique_names": 111,
+          "group_coverage": 0.054
+        },
+        {
+          "group": "0x107ff648",
+          "columns": 3,
+          "fields": 9,
+          "unique_names": 9,
+          "group_coverage": 0.333
+        },
+        {
+          "group": "0x40aaf78",
+          "columns": 2,
+          "fields": 20,
+          "unique_names": 20,
+          "group_coverage": 0.1
+        },
+        {
+          "group": "0xebe8be0",
+          "columns": 2,
+          "fields": 4,
+          "unique_names": 4,
+          "group_coverage": 0.5
+        },
+        {
+          "group": "0xf1a77f0",
+          "columns": 2,
+          "fields": 3,
+          "unique_names": 3,
+          "group_coverage": 0.667
+        },
+        {
+          "group": "0xf1a8450",
+          "columns": 1,
+          "fields": 203,
+          "unique_names": 200,
+          "group_coverage": 0.005
+        },
+        {
+          "group": "0x40ab008",
+          "columns": 1,
+          "fields": 80,
+          "unique_names": 80,
+          "group_coverage": 0.013
+        },
+        {
+          "group": "0xede4f00",
+          "columns": 1,
+          "fields": 25,
+          "unique_names": 25,
+          "group_coverage": 0.04
+        },
+        {
+          "group": "0xebe8490",
+          "columns": 1,
+          "fields": 3,
+          "unique_names": 3,
+          "group_coverage": 0.333
+        },
+        {
+          "group": "0xf1a67a0",
+          "columns": 1,
+          "fields": 1,
+          "unique_names": 1,
+          "group_coverage": 1.0
+        }
+      ],
+      "bound_column_count": 38,
+      "ambiguous_column_count": 0,
+      "missing_column_count": 9,
+      "binding_coverage": 0.809,
+      "primary_block_id": null,
+      "primary_block_name": null
+    },
+    {
+      "key": "astro_call_list",
+      "title": "List in ASTRO Call List",
+      "file": "List in ASTRO Call List.tbl",
+      "size": 294,
+      "sha256": "3e718a78d3a816c6d38e7a10b4b60bc3590698834aad82e1b7920ca686fc9f5d",
+      "block_id": 127,
+      "block_name": "List",
+      "core_section": "astro_systems",
+      "core_section_tags": [
+        "0x0FAC",
+        "0x0FAD",
+        "0x0FAE",
+        "0x0FAF",
+        "0x0FB0",
+        "0x0FB1",
+        "0x0FF2",
+        "0x0FF3",
+        "0x0FF4",
+        "0x0FF5",
+        "0x0FF6",
+        "0x0FF7",
+        "0x0FF8",
+        "0x0FF9"
+      ],
+      "mapping_confidence": "inferred",
+      "column_count": 3,
+      "text_column_count": 3,
+      "checkbox_column_count": 0,
+      "layout_rows": 8,
+      "layout_groups": 1,
+      "duplicate_column_names": [],
+      "columns": [
+        {
+          "index": 0,
+          "name": "Type",
+          "name_raw": "Type",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 40,
+          "offset": 85,
+          "bindings": [
+            {
+              "fid": 3516,
+              "group": "0x40abe18",
+              "off": 0,
+              "bits": 1,
+              "msb": 7,
+              "table_score": 2,
+              "block_id": 15,
+              "block_name": "Mdc Call Id Text blk"
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 1,
+          "name": "Call ID",
+          "name_raw": "Call ID",
+          "control": "text",
+          "value_type": "string",
+          "flags": 4,
+          "flags_hex": "0x0004",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 40,
+          "offset": 146,
+          "bindings": [
+            {
+              "fid": 3518,
+              "group": "0x40abe18",
+              "off": 0,
+              "bits": 31,
+              "msb": 6,
+              "table_score": 2,
+              "block_id": 15,
+              "block_name": "Mdc Call Id Text blk"
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 2,
+          "name": "ASTRO Call ID Text",
+          "name_raw": "ASTRO Call ID Text ",
+          "control": "text",
+          "value_type": "string",
+          "flags": 4,
+          "flags_hex": "0x0004",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 80,
+          "offset": 210,
+          "bindings": [
+            {
+              "fid": 3698,
+              "group": "0x40ab878",
+              "off": 0,
+              "bits": 136,
+              "msb": 7,
+              "table_score": 1,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        }
+      ],
+      "primary_group": "0x40abe18",
+      "primary_group_columns": 2,
+      "matched_groups": [
+        {
+          "group": "0x40abe18",
+          "columns": 2,
+          "fields": 2,
+          "unique_names": 2,
+          "group_coverage": 1.0
+        },
+        {
+          "group": "0x107ff768",
+          "columns": 1,
+          "fields": 5,
+          "unique_names": 5,
+          "group_coverage": 0.2
+        },
+        {
+          "group": "0x40ab488",
+          "columns": 1,
+          "fields": 1,
+          "unique_names": 1,
+          "group_coverage": 1.0
+        },
+        {
+          "group": "0xf19ba90",
+          "columns": 1,
+          "fields": 1,
+          "unique_names": 1,
+          "group_coverage": 1.0
+        },
+        {
+          "group": "0x40ab878",
+          "columns": 1,
+          "fields": 1,
+          "unique_names": 1,
+          "group_coverage": 1.0
+        }
+      ],
+      "bound_column_count": 3,
+      "ambiguous_column_count": 0,
+      "missing_column_count": 0,
+      "binding_coverage": 1.0,
+      "primary_block_id": 15,
+      "primary_block_name": "Mdc Call Id Text blk"
+    },
+    {
+      "key": "trunking_call_list",
+      "title": "List in Trunking Call List",
+      "file": "List in Trunking Call List.tbl",
+      "size": 363,
+      "sha256": "bbadace46a8856c2325edab6d57c16f2c12f2fd2869b29035024723c51ac40a2",
+      "block_id": 85,
+      "block_name": "TypeII Trunking Call List",
+      "core_section": "trunking_personality",
+      "core_section_tags": [
+        "0x0052",
+        "0x0053",
+        "0x0FA8",
+        "0x0FA9",
+        "0x0FC6",
+        "0x0FD0",
+        "0x0FD1"
+      ],
+      "mapping_confidence": "inferred",
+      "column_count": 4,
+      "text_column_count": 4,
+      "checkbox_column_count": 0,
+      "layout_rows": 1,
+      "layout_groups": 1,
+      "duplicate_column_names": [],
+      "columns": [
+        {
+          "index": 0,
+          "name": "Call List ID",
+          "name_raw": "Call List ID",
+          "control": "text",
+          "value_type": "string",
+          "flags": 4,
+          "flags_hex": "0x0004",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 40,
+          "offset": 85,
+          "match": "bound",
+          "bindings": [
+            {
+              "fid": 13057,
+              "group": "0xede59b0",
+              "off": 0,
+              "bits": 24,
+              "msb": 7,
+              "table_score": 0,
+              "block_id": 153,
+              "block_name": "APCO Trunking Call List"
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "name": "Call List Text",
+          "name_raw": "Call List Text",
+          "control": "text",
+          "value_type": "string",
+          "flags": 0,
+          "flags_hex": "0x0000",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 80,
+          "offset": 154,
+          "bindings": [
+            {
+              "fid": 10109,
+              "group": "0xede5bf0",
+              "off": 0,
+              "bits": 136,
+              "msb": 7,
+              "table_score": 1,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 2,
+          "name": "WACN ID",
+          "name_raw": "WACN ID",
+          "control": "text",
+          "value_type": "string",
+          "flags": 0,
+          "flags_hex": "0x0000",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 60,
+          "offset": 225,
+          "bindings": [
+            {
+              "fid": 25400,
+              "group": "0x107feb08",
+              "off": 0,
+              "bits": 32,
+              "msb": 7,
+              "table_score": 2,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 3,
+          "name": "System ID",
+          "name_raw": "System ID",
+          "control": "text",
+          "value_type": "string",
+          "flags": 0,
+          "flags_hex": "0x0000",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 60,
+          "offset": 289,
+          "bindings": [
+            {
+              "fid": 25401,
+              "group": "0x107feb08",
+              "off": 4,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 2,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        }
+      ],
+      "primary_group": "0x107feb08",
+      "primary_group_columns": 2,
+      "matched_groups": [
+        {
+          "group": "0x107feb08",
+          "columns": 2,
+          "fields": 7,
+          "unique_names": 7,
+          "group_coverage": 0.286
+        },
+        {
+          "group": "0xf19c420",
+          "columns": 2,
+          "fields": 5,
+          "unique_names": 5,
+          "group_coverage": 0.4
+        },
+        {
+          "group": "0x107fe9e8",
+          "columns": 2,
+          "fields": 2,
+          "unique_names": 2,
+          "group_coverage": 1.0
+        },
+        {
+          "group": "0xede4840",
+          "columns": 1,
+          "fields": 109,
+          "unique_names": 109,
+          "group_coverage": 0.009
+        },
+        {
+          "group": "0xebe8d90",
+          "columns": 1,
+          "fields": 6,
+          "unique_names": 6,
+          "group_coverage": 0.167
+        },
+        {
+          "group": "0xf19cc90",
+          "columns": 1,
+          "fields": 5,
+          "unique_names": 5,
+          "group_coverage": 0.2
+        },
+        {
+          "group": "0xede5bf0",
+          "columns": 1,
+          "fields": 1,
+          "unique_names": 1,
+          "group_coverage": 1.0
+        }
+      ],
+      "bound_column_count": 4,
+      "ambiguous_column_count": 0,
+      "missing_column_count": 0,
+      "binding_coverage": 1.0,
+      "primary_block_id": null,
+      "primary_block_name": null
+    },
+    {
+      "key": "narrow_band_list",
+      "title": "Narrow Bandwidth 12.5 kHz Only Frequency Range List",
+      "file": "Narrow Bandwidth 12.5 kHz Only Frequency Range List.tbl",
+      "size": 283,
+      "sha256": "f92c1e9f60cfbb75e4df147e5c6f807446cde4bc0d024f46ac4f4e336310190a",
+      "block_id": 292,
+      "block_name": "Narrow Bandwidth 12.5 kHz Only Frequency Range Table Block",
+      "core_section": "narrow_band_list",
+      "core_section_tags": [
+        "0x0029"
+      ],
+      "mapping_confidence": "inferred",
+      "column_count": 2,
+      "text_column_count": 2,
+      "checkbox_column_count": 0,
+      "layout_rows": 0,
+      "layout_groups": 0,
+      "duplicate_column_names": [],
+      "columns": [
+        {
+          "index": 0,
+          "name": "FCC Narrow Banding Start Frequency(MHz)",
+          "name_raw": "FCC Narrow Banding Start Frequency(MHz)",
+          "control": "text",
+          "value_type": "string",
+          "flags": 0,
+          "flags_hex": "0x0000",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 150,
+          "offset": 85,
+          "bindings": [
+            {
+              "fid": 12036,
+              "group": "0x107ff918",
+              "off": 0,
+              "bits": 32,
+              "msb": 7,
+              "table_score": 2,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 1,
+          "name": "FCC Narrow Banding End Frequency(MHz)",
+          "name_raw": "FCC Narrow Banding End Frequency(MHz)",
+          "control": "text",
+          "value_type": "string",
+          "flags": 0,
+          "flags_hex": "0x0000",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 150,
+          "offset": 181,
+          "bindings": [
+            {
+              "fid": 12037,
+              "group": "0x107ff918",
+              "off": 4,
+              "bits": 32,
+              "msb": 7,
+              "table_score": 2,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        }
+      ],
+      "primary_group": "0x107ff918",
+      "primary_group_columns": 2,
+      "matched_groups": [
+        {
+          "group": "0x107ff918",
+          "columns": 2,
+          "fields": 2,
+          "unique_names": 2,
+          "group_coverage": 1.0
+        }
+      ],
+      "bound_column_count": 2,
+      "ambiguous_column_count": 0,
+      "missing_column_count": 0,
+      "binding_coverage": 1.0,
+      "primary_block_id": null,
+      "primary_block_name": null
+    },
+    {
+      "key": "nat_list",
+      "title": "NAT List",
+      "file": "NAT List.tbl",
+      "size": 301,
+      "sha256": "fdf235fdd1c05387204f51a47186518523fcb707405880551b831a52327b0d38",
+      "block_id": 220,
+      "block_name": "NAT Entry",
+      "core_section": "radio_wide",
+      "core_section_tags": [],
+      "mapping_confidence": "inferred",
+      "column_count": 3,
+      "text_column_count": 3,
+      "checkbox_column_count": 0,
+      "layout_rows": 0,
+      "layout_groups": 0,
+      "duplicate_column_names": [],
+      "columns": [
+        {
+          "index": 0,
+          "name": "WAN Port",
+          "name_raw": "WAN Port",
+          "control": "text",
+          "value_type": "string",
+          "flags": 0,
+          "flags_hex": "0x0000",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 50,
+          "offset": 85,
+          "bindings": [
+            {
+              "fid": 13552,
+              "group": "0xf1a69e0",
+              "off": 0,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 2,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 1,
+          "name": "LAN Port",
+          "name_raw": "LAN Port",
+          "control": "text",
+          "value_type": "string",
+          "flags": 0,
+          "flags_hex": "0x0000",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 50,
+          "offset": 150,
+          "bindings": [
+            {
+              "fid": 13553,
+              "group": "0xf1a69e0",
+              "off": 2,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 2,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 2,
+          "name": "Static NAT IP Address",
+          "name_raw": "Static NAT IP Address",
+          "control": "text",
+          "value_type": "string",
+          "flags": 0,
+          "flags_hex": "0x0000",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 60,
+          "offset": 215,
+          "match": "composite",
+          "bindings": [
+            {
+              "fid": 13557,
+              "group": "0xf1a69e0",
+              "off": 4,
+              "bits": 8,
+              "msb": 7,
+              "table_score": 2,
+              "block_id": null,
+              "block_name": null
+            },
+            {
+              "fid": 13558,
+              "group": "0xf1a69e0",
+              "off": 5,
+              "bits": 8,
+              "msb": 7,
+              "table_score": 2,
+              "block_id": null,
+              "block_name": null
+            },
+            {
+              "fid": 13559,
+              "group": "0xf1a69e0",
+              "off": 6,
+              "bits": 8,
+              "msb": 7,
+              "table_score": 2,
+              "block_id": null,
+              "block_name": null
+            },
+            {
+              "fid": 13560,
+              "group": "0xf1a69e0",
+              "off": 7,
+              "bits": 8,
+              "msb": 7,
+              "table_score": 2,
+              "block_id": null,
+              "block_name": null
+            }
+          ]
+        }
+      ],
+      "primary_group": "0xf1a69e0",
+      "primary_group_columns": 2,
+      "matched_groups": [
+        {
+          "group": "0xf1a69e0",
+          "columns": 2,
+          "fields": 6,
+          "unique_names": 6,
+          "group_coverage": 0.333
+        }
+      ],
+      "bound_column_count": 3,
+      "ambiguous_column_count": 0,
+      "missing_column_count": 0,
+      "binding_coverage": 1.0,
+      "primary_block_id": null,
+      "primary_block_name": null
+    },
+    {
+      "key": "trunking_obt_astro_control_channels",
+      "title": "OBT ASTRO 25 Control Channels Table in Trunking System",
+      "file": "OBT ASTRO 25 Control Channels Table in Trunking System.tbl",
+      "size": 525,
+      "sha256": "b64404af3edf36271ad3b1f34a12d3df2e16847bb47f30970217e185e9c7cdce",
+      "block_id": 22,
+      "block_name": "Trunking System Control Channel List",
+      "core_section": "trunking_system",
+      "core_section_tags": [
+        "0x0FE6"
+      ],
+      "mapping_confidence": "inferred",
+      "column_count": 6,
+      "text_column_count": 6,
+      "checkbox_column_count": 0,
+      "layout_rows": 0,
+      "layout_groups": 0,
+      "duplicate_column_names": [
+        "Rx Freq (MHz)",
+        "Tx Freq (MHz)"
+      ],
+      "columns": [
+        {
+          "index": 0,
+          "name": "Chan Bandwidth (kHz)",
+          "name_raw": "Chan Bandwidth (kHz)",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 60,
+          "offset": 85,
+          "bindings": [
+            {
+              "fid": 11395,
+              "group": "0xebe85b0",
+              "off": 1,
+              "bits": 8,
+              "msb": 7,
+              "table_score": 4,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 1,
+          "name": "Tx Deviation (kHz)",
+          "name_raw": "Tx Deviation (kHz)",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 60,
+          "offset": 162,
+          "bindings": [
+            {
+              "fid": 11397,
+              "group": "0xebe85b0",
+              "off": 0,
+              "bits": 2,
+              "msb": 1,
+              "table_score": 4,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 2,
+          "name": "Rx Freq (MHz)",
+          "name_raw": "Rx Freq (MHz)",
+          "control": "text",
+          "value_type": "string",
+          "flags": 4,
+          "flags_hex": "0x0004",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 45,
+          "offset": 237,
+          "bindings": [
+            {
+              "fid": 11393,
+              "group": "0xebe85b0",
+              "off": 2,
+              "bits": 32,
+              "msb": 7,
+              "table_score": 4,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 3,
+          "name": "Rx Freq (MHz)",
+          "name_raw": "Rx Freq (MHz)",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 45,
+          "offset": 307,
+          "bindings": [
+            {
+              "fid": 11393,
+              "group": "0xebe85b0",
+              "off": 2,
+              "bits": 32,
+              "msb": 7,
+              "table_score": 4,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 4,
+          "name": "Tx Freq (MHz)",
+          "name_raw": "Tx Freq (MHz)",
+          "control": "text",
+          "value_type": "string",
+          "flags": 4,
+          "flags_hex": "0x0004",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 45,
+          "offset": 377,
+          "bindings": [
+            {
+              "fid": 11394,
+              "group": "0xebe85b0",
+              "off": 6,
+              "bits": 32,
+              "msb": 7,
+              "table_score": 4,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 5,
+          "name": "Tx Freq (MHz)",
+          "name_raw": "Tx Freq (MHz)",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 45,
+          "offset": 447,
+          "bindings": [
+            {
+              "fid": 11394,
+              "group": "0xebe85b0",
+              "off": 6,
+              "bits": 32,
+              "msb": 7,
+              "table_score": 4,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        }
+      ],
+      "primary_group": "0xebe85b0",
+      "primary_group_columns": 4,
+      "matched_groups": [
+        {
+          "group": "0xebe85b0",
+          "columns": 4,
+          "fields": 5,
+          "unique_names": 5,
+          "group_coverage": 0.8
+        },
+        {
+          "group": "0xf1a6c20",
+          "columns": 1,
+          "fields": 2,
+          "unique_names": 2,
+          "group_coverage": 0.5
+        },
+        {
+          "group": "0xf1a7640",
+          "columns": 1,
+          "fields": 2,
+          "unique_names": 2,
+          "group_coverage": 0.5
+        }
+      ],
+      "bound_column_count": 6,
+      "ambiguous_column_count": 0,
+      "missing_column_count": 0,
+      "binding_coverage": 1.0,
+      "primary_block_id": null,
+      "primary_block_name": null
+    },
+    {
+      "key": "trunking_obt_control_channels",
+      "title": "OBT Control Channels Table in Trunking System",
+      "file": "OBT Control Channels Table in Trunking System.tbl",
+      "size": 369,
+      "sha256": "f7820c904cfce1ffa676a82540715de42f8168df70298f57d1d0b4b45f2d64bd",
+      "block_id": 22,
+      "block_name": "Trunking System Control Channel List",
+      "core_section": "trunking_system",
+      "core_section_tags": [
+        "0x0FE6"
+      ],
+      "mapping_confidence": "inferred",
+      "column_count": 4,
+      "text_column_count": 4,
+      "checkbox_column_count": 0,
+      "layout_rows": 0,
+      "layout_groups": 0,
+      "duplicate_column_names": [
+        "Rx Frequency",
+        "Tx Frequency"
+      ],
+      "columns": [
+        {
+          "index": 0,
+          "name": "Tx Frequency",
+          "name_raw": "Tx Frequency",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 45,
+          "offset": 85,
+          "bindings": [
+            {
+              "fid": 10968,
+              "group": "0xebe87f0",
+              "off": 1,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 2,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 1,
+          "name": "Tx Frequency",
+          "name_raw": "Tx Frequency",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 45,
+          "offset": 154,
+          "bindings": [
+            {
+              "fid": 10968,
+              "group": "0xebe87f0",
+              "off": 1,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 2,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 2,
+          "name": "Rx Frequency",
+          "name_raw": "Rx Frequency",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 45,
+          "offset": 223,
+          "bindings": [
+            {
+              "fid": 10967,
+              "group": "0xebe87f0",
+              "off": 3,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 2,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 3,
+          "name": "Rx Frequency",
+          "name_raw": "Rx Frequency",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 45,
+          "offset": 292,
+          "bindings": [
+            {
+              "fid": 10967,
+              "group": "0xebe87f0",
+              "off": 3,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 2,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        }
+      ],
+      "primary_group": "0xebe87f0",
+      "primary_group_columns": 2,
+      "matched_groups": [
+        {
+          "group": "0xebe87f0",
+          "columns": 2,
+          "fields": 4,
+          "unique_names": 4,
+          "group_coverage": 0.5
+        },
+        {
+          "group": "0x107ffc78",
+          "columns": 2,
+          "fields": 3,
+          "unique_names": 3,
+          "group_coverage": 0.667
+        }
+      ],
+      "bound_column_count": 4,
+      "ambiguous_column_count": 0,
+      "missing_column_count": 0,
+      "binding_coverage": 1.0,
+      "primary_block_id": null,
+      "primary_block_name": null
+    },
+    {
+      "key": "secure_multikey",
+      "title": "Secure Multikey",
+      "file": "Secure Multikey.tbl",
+      "size": 565,
+      "sha256": "873466d52063f58c4940982aa668a5fa21580a19b417d865c9e89ed83511e2d7",
+      "block_id": 1,
+      "block_name": "Multikey Radio Block",
+      "core_section": "secure",
+      "core_section_tags": [
+        "0x0034",
+        "0x0057"
+      ],
+      "mapping_confidence": "inferred",
+      "column_count": 7,
+      "text_column_count": 6,
+      "checkbox_column_count": 1,
+      "layout_rows": 0,
+      "layout_groups": 0,
+      "duplicate_column_names": [],
+      "columns": [
+        {
+          "index": 0,
+          "name": "CKR #",
+          "name_raw": "CKR #",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 20,
+          "offset": 85,
+          "bindings": [
+            {
+              "fid": 9814,
+              "group": "0xf62ff60",
+              "off": 0,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 1,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 1,
+          "name": "Key Name",
+          "name_raw": "Key Name",
+          "control": "text",
+          "value_type": "string",
+          "flags": 4,
+          "flags_hex": "0x0004",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 80,
+          "offset": 147,
+          "bindings": [
+            {
+              "fid": 9709,
+              "group": "0xf62fed0",
+              "off": 0,
+              "bits": 136,
+              "msb": 7,
+              "table_score": 1,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 2,
+          "name": "Indexed",
+          "name_raw": "Indexed",
+          "control": "checkbox",
+          "value_type": "bool",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 153,
+          "type_code": 4,
+          "width": 25,
+          "offset": 212,
+          "match": "missing",
+          "bindings": []
+        },
+        {
+          "index": 3,
+          "name": "Slot A",
+          "name_raw": "Slot A",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 20,
+          "offset": 273,
+          "match": "missing",
+          "bindings": []
+        },
+        {
+          "index": 4,
+          "name": "Slot B",
+          "name_raw": "Slot B",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 20,
+          "offset": 336,
+          "match": "missing",
+          "bindings": []
+        },
+        {
+          "index": 5,
+          "name": "Selectable ADP Key ID",
+          "name_raw": "Selectable ADP Key ID",
+          "control": "text",
+          "value_type": "string",
+          "flags": 4,
+          "flags_hex": "0x0004",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 60,
+          "offset": 399,
+          "bindings": [
+            {
+              "fid": 14041,
+              "group": "0xf62f030",
+              "off": 0,
+              "bits": 32,
+              "msb": 7,
+              "table_score": 2,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 6,
+          "name": "Selectable ADP Key Data",
+          "name_raw": "Selectable ADP Key Data",
+          "control": "text",
+          "value_type": "string",
+          "flags": 4,
+          "flags_hex": "0x0004",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 70,
+          "offset": 477,
+          "bindings": [
+            {
+              "fid": 14042,
+              "group": "0xf62f030",
+              "off": 4,
+              "bits": 80,
+              "msb": 7,
+              "table_score": 2,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        }
+      ],
+      "primary_group": "0xf62f030",
+      "primary_group_columns": 2,
+      "matched_groups": [
+        {
+          "group": "0xf62f030",
+          "columns": 2,
+          "fields": 2,
+          "unique_names": 2,
+          "group_coverage": 1.0
+        },
+        {
+          "group": "0xf62ff60",
+          "columns": 1,
+          "fields": 1,
+          "unique_names": 1,
+          "group_coverage": 1.0
+        },
+        {
+          "group": "0xf62fed0",
+          "columns": 1,
+          "fields": 1,
+          "unique_names": 1,
+          "group_coverage": 1.0
+        }
+      ],
+      "bound_column_count": 4,
+      "ambiguous_column_count": 0,
+      "missing_column_count": 3,
+      "binding_coverage": 0.571,
+      "primary_block_id": null,
+      "primary_block_name": null
+    },
+    {
+      "key": "trunking_preferred_sites",
+      "title": "SmartZone Preferred  Sites Table in Trunking Personality",
+      "file": "SmartZone Preferred  Sites Table in Trunking Personality.tbl",
+      "size": 525,
+      "sha256": "4f75f2b252e1d2eaccf459d56d856a5490701bcc7550ca36d28568abc2f475ac",
+      "block_id": 98,
+      "block_name": "Preferred Sites Status Block",
+      "core_section": "trunking_personality",
+      "core_section_tags": [
+        "0x0FE6"
+      ],
+      "mapping_confidence": "inferred",
+      "column_count": 6,
+      "text_column_count": 6,
+      "checkbox_column_count": 0,
+      "layout_rows": 0,
+      "layout_groups": 0,
+      "duplicate_column_names": [],
+      "columns": [
+        {
+          "index": 0,
+          "name": "Site ID (Decimal)",
+          "name_raw": "Site ID (Decimal)",
+          "control": "text",
+          "value_type": "string",
+          "flags": 0,
+          "flags_hex": "0x0000",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 60,
+          "offset": 85,
+          "bindings": [
+            {
+              "fid": 11670,
+              "group": "0xf19cc90",
+              "off": 2,
+              "bits": 8,
+              "msb": 7,
+              "table_score": 4,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 1,
+          "name": "Site ID (Hex)",
+          "name_raw": "Site ID (Hex)",
+          "control": "text",
+          "value_type": "string",
+          "flags": 4,
+          "flags_hex": "0x0004",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 65,
+          "offset": 159,
+          "bindings": [
+            {
+              "fid": 11670,
+              "group": "0xf19cc90",
+              "off": 2,
+              "bits": 8,
+              "msb": 7,
+              "table_score": 4,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 2,
+          "name": "Preferred Status",
+          "name_raw": "Preferred Status",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 50,
+          "offset": 229,
+          "bindings": [
+            {
+              "fid": 10616,
+              "group": "0xf19c8a0",
+              "off": 0,
+              "bits": 2,
+              "msb": 7,
+              "table_score": 3,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 3,
+          "name": "Type II Sys ID - RFSS ID",
+          "name_raw": "Type II Sys ID - RFSS ID",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 70,
+          "offset": 302,
+          "bindings": [
+            {
+              "fid": 10761,
+              "group": "0xf19cc90",
+              "off": 1,
+              "bits": 8,
+              "msb": 7,
+              "table_score": 4,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 4,
+          "name": "WACN ID",
+          "name_raw": "WACN ID",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 50,
+          "offset": 383,
+          "bindings": [
+            {
+              "fid": 14611,
+              "group": "0xf19cc90",
+              "off": 5,
+              "bits": 32,
+              "msb": 7,
+              "table_score": 4,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 5,
+          "name": "P25 System ID",
+          "name_raw": "P25 System ID",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 50,
+          "offset": 447,
+          "bindings": [
+            {
+              "fid": 10875,
+              "group": "0xf19cc90",
+              "off": 3,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 4,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        }
+      ],
+      "primary_group": "0xf19cc90",
+      "primary_group_columns": 4,
+      "matched_groups": [
+        {
+          "group": "0xf19cc90",
+          "columns": 4,
+          "fields": 5,
+          "unique_names": 5,
+          "group_coverage": 0.8
+        },
+        {
+          "group": "0xf19c8a0",
+          "columns": 3,
+          "fields": 3,
+          "unique_names": 3,
+          "group_coverage": 1.0
+        },
+        {
+          "group": "0xebe8d90",
+          "columns": 2,
+          "fields": 6,
+          "unique_names": 6,
+          "group_coverage": 0.333
+        },
+        {
+          "group": "0xede40f0",
+          "columns": 1,
+          "fields": 28,
+          "unique_names": 28,
+          "group_coverage": 0.036
+        },
+        {
+          "group": "0x107feb08",
+          "columns": 1,
+          "fields": 7,
+          "unique_names": 7,
+          "group_coverage": 0.143
+        },
+        {
+          "group": "0xf19c420",
+          "columns": 1,
+          "fields": 5,
+          "unique_names": 5,
+          "group_coverage": 0.2
+        },
+        {
+          "group": "0x107fe9e8",
+          "columns": 1,
+          "fields": 2,
+          "unique_names": 2,
+          "group_coverage": 0.5
+        }
+      ],
+      "bound_column_count": 6,
+      "ambiguous_column_count": 0,
+      "missing_column_count": 0,
+      "binding_coverage": 1.0,
+      "primary_block_id": null,
+      "primary_block_name": null
+    },
+    {
+      "key": "astro_talkgroup_list",
+      "title": "TalkGroup in ASTRO Talkgroup List",
+      "file": "TalkGroup in ASTRO Talkgroup List.tbl",
+      "size": 403,
+      "sha256": "85303f4b6b7b046e57031e66445c4d41795cf081f5d1bcbbd4ae1f6723d2d5ce",
+      "block_id": 145,
+      "block_name": "Astro Talkgroup ID Block",
+      "core_section": "talkgroup",
+      "core_section_tags": [
+        "0x0FD2",
+        "0x0FD3",
+        "0x0FD4",
+        "0x0FD5",
+        "0x0FD6",
+        "0x0FD7",
+        "0x0FD8",
+        "0x0FD9",
+        "0x0FDA",
+        "0x0FDB",
+        "0x0FDC",
+        "0x0FDD",
+        "0x0FDE",
+        "0x0FDF",
+        "0x0FE0",
+        "0x0FE1",
+        "0x0FE2",
+        "0x0FE3",
+        "0x0FE4",
+        "0x0FE5",
+        "0x0FE7",
+        "0x0FE8",
+        "0x0FE9",
+        "0x0FEA",
+        "0x0FEB",
+        "0x0FEC",
+        "0x0FED",
+        "0x0FEE",
+        "0x0FEF"
+      ],
+      "mapping_confidence": "inferred",
+      "column_count": 4,
+      "text_column_count": 4,
+      "checkbox_column_count": 0,
+      "layout_rows": 5,
+      "layout_groups": 1,
+      "duplicate_column_names": [],
+      "columns": [
+        {
+          "index": 0,
+          "name": "Talkgroup ID",
+          "name_raw": "Talkgroup ID",
+          "control": "text",
+          "value_type": "string",
+          "flags": 4,
+          "flags_hex": "0x0004",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 40,
+          "offset": 85,
+          "bindings": [
+            {
+              "fid": 3510,
+              "group": "0x40aba28",
+              "off": 0,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 2,
+              "block_id": 233,
+              "block_name": "MDC Call ID Text List Distributed Header"
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 1,
+          "name": "Talkgroup Alias Text",
+          "name_raw": "Talkgroup Alias Text",
+          "control": "text",
+          "value_type": "string",
+          "flags": 4,
+          "flags_hex": "0x0004",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 55,
+          "offset": 154,
+          "bindings": [
+            {
+              "fid": 3511,
+              "group": "0x40abc68",
+              "off": 0,
+              "bits": 136,
+              "msb": 7,
+              "table_score": 1,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 2,
+          "name": "Voice Secure / Clear Strapping",
+          "name_raw": "Voice Secure / Clear Strapping",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 80,
+          "offset": 231,
+          "bindings": [
+            {
+              "fid": 3727,
+              "group": "0x40aba28",
+              "off": 2,
+              "bits": 2,
+              "msb": 1,
+              "table_score": 2,
+              "block_id": 233,
+              "block_name": "MDC Call ID Text List Distributed Header"
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 3,
+          "name": "Key Select Reference",
+          "name_raw": "Key Select Reference",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 70,
+          "offset": 318,
+          "match": "bound",
+          "bindings": [
+            {
+              "fid": 3502,
+              "group": "0x40aba28",
+              "off": 3,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 2,
+              "block_id": 233,
+              "block_name": "MDC Call ID Text List Distributed Header"
+            }
+          ]
+        }
+      ],
+      "primary_group": "0x40aba28",
+      "primary_group_columns": 2,
+      "matched_groups": [
+        {
+          "group": "0x40aba28",
+          "columns": 2,
+          "fields": 4,
+          "unique_names": 4,
+          "group_coverage": 0.5
+        },
+        {
+          "group": "0x40aa318",
+          "columns": 1,
+          "fields": 74,
+          "unique_names": 74,
+          "group_coverage": 0.014
+        },
+        {
+          "group": "0x40abc68",
+          "columns": 1,
+          "fields": 1,
+          "unique_names": 1,
+          "group_coverage": 1.0
+        }
+      ],
+      "bound_column_count": 4,
+      "ambiguous_column_count": 0,
+      "missing_column_count": 0,
+      "binding_coverage": 1.0,
+      "primary_block_id": 233,
+      "primary_block_name": "MDC Call ID Text List Distributed Header"
+    },
+    {
+      "key": "trunking_personality_talkgroups",
+      "title": "Talkgroup Table in Trunking Personality",
+      "file": "Talkgroup Table in Trunking Personality.tbl",
+      "size": 2606,
+      "sha256": "5bfb009b513a5e208fa5ee397ab8b713a4063263d52aa449ebfdb4252ab78f1e",
+      "block_id": 224,
+      "block_name": "Trunking Personality Talkgroup List Block",
+      "core_section": "trunking_personality",
+      "core_section_tags": [
+        "0x0052",
+        "0x0053",
+        "0x0FA8",
+        "0x0FA9",
+        "0x0FC6",
+        "0x0FD0",
+        "0x0FD1"
+      ],
+      "mapping_confidence": "inferred",
+      "column_count": 32,
+      "text_column_count": 29,
+      "checkbox_column_count": 3,
+      "layout_rows": 0,
+      "layout_groups": 0,
+      "duplicate_column_names": [
+        "F/S ASTRO 25 Rx Freq (MHz)",
+        "F/S ASTRO 25 Rx Frequency",
+        "F/S ASTRO 25 Tx Freq (MHz)",
+        "F/S Type II Rx Freq",
+        "F/S Type II Rx Frequency",
+        "F/S Type II Tx Freq",
+        "Rebanded F/S ASTRO 25 Rx Frequency",
+        "Rebanded F/S Type II Rx Frequency"
+      ],
+      "columns": [
+        {
+          "index": 0,
+          "name": "ASTRO 25 Talkgroup",
+          "name_raw": "ASTRO 25 Talkgroup",
+          "control": "text",
+          "value_type": "string",
+          "flags": 4,
+          "flags_hex": "0x0004",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 56,
+          "offset": 85,
+          "bindings": [
+            {
+              "fid": 10857,
+              "group": "0xebe8d90",
+              "off": 0,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 3,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 1,
+          "name": "Talkgroup",
+          "name_raw": "Talkgroup",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 30,
+          "offset": 160,
+          "bindings": [
+            {
+              "fid": 10672,
+              "group": "0xebe8be0",
+              "off": 0,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 4,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 2,
+          "name": "Failsoft",
+          "name_raw": "Failsoft",
+          "control": "checkbox",
+          "value_type": "bool",
+          "flags": 0,
+          "flags_hex": "0x0000",
+          "format_code": 153,
+          "type_code": 4,
+          "width": 22,
+          "offset": 226,
+          "bindings": [
+            {
+              "fid": 10526,
+              "group": "0xebe7cb0",
+              "off": 0,
+              "bits": 1,
+              "msb": 7,
+              "table_score": 3,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 3,
+          "name": "F/S Type II Rx Frequency",
+          "name_raw": "F/S Type II Rx Frequency",
+          "control": "text",
+          "value_type": "string",
+          "flags": 0,
+          "flags_hex": "0x0000",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 75,
+          "offset": 288,
+          "bindings": [
+            {
+              "fid": 11730,
+              "group": "0xebe7cb0",
+              "off": 1,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 3,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 4,
+          "name": "F/S Type II Rx Frequency",
+          "name_raw": "F/S Type II Rx Frequency",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 75,
+          "offset": 369,
+          "bindings": [
+            {
+              "fid": 11730,
+              "group": "0xebe7cb0",
+              "off": 1,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 3,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 5,
+          "name": "Rebanded F/S Type II Rx Frequency",
+          "name_raw": "Rebanded F/S Type II Rx Frequency",
+          "control": "text",
+          "value_type": "string",
+          "flags": 0,
+          "flags_hex": "0x0000",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 100,
+          "offset": 450,
+          "bindings": [
+            {
+              "fid": 11766,
+              "group": "0xebe7cb0",
+              "off": 3,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 3,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 6,
+          "name": "Rebanded F/S Type II Rx Frequency",
+          "name_raw": "Rebanded F/S Type II Rx Frequency ",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 75,
+          "offset": 540,
+          "bindings": [
+            {
+              "fid": 11766,
+              "group": "0xebe7cb0",
+              "off": 3,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 3,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 7,
+          "name": "Channel ID Number",
+          "name_raw": "Channel ID Number",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 52,
+          "offset": 631,
+          "bindings": [
+            {
+              "fid": 10865,
+              "group": "0xebe7830",
+              "off": 0,
+              "bits": 4,
+              "msb": 3,
+              "table_score": 2,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 8,
+          "name": "F/S ASTRO 25 Rx Frequency",
+          "name_raw": "F/S ASTRO 25 Rx Frequency",
+          "control": "text",
+          "value_type": "string",
+          "flags": 0,
+          "flags_hex": "0x0000",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 77,
+          "offset": 705,
+          "bindings": [
+            {
+              "fid": 11727,
+              "group": "0xebe7830",
+              "off": 1,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 2,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 9,
+          "name": "F/S ASTRO 25 Rx Frequency",
+          "name_raw": "F/S ASTRO 25 Rx Frequency",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 77,
+          "offset": 787,
+          "bindings": [
+            {
+              "fid": 11727,
+              "group": "0xebe7830",
+              "off": 1,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 2,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 10,
+          "name": "F/S ASTRO 25 Tx Frequency",
+          "name_raw": "F/S ASTRO 25 Tx Frequency",
+          "control": "text",
+          "value_type": "string",
+          "flags": 0,
+          "flags_hex": "0x0000",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 77,
+          "offset": 869,
+          "match": "bound",
+          "bindings": [
+            {
+              "fid": 11717,
+              "group": "0xebe75f0",
+              "off": 6,
+              "bits": 32,
+              "msb": 7,
+              "table_score": 5,
+              "block_id": null,
+              "block_name": null
+            }
+          ]
+        },
+        {
+          "index": 11,
+          "name": "Rebanded Channel ID Number",
+          "name_raw": "Rebanded Channel ID Number",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 80,
+          "offset": 951,
+          "bindings": [
+            {
+              "fid": 11771,
+              "group": "0xebe78c0",
+              "off": 3,
+              "bits": 4,
+              "msb": 3,
+              "table_score": 2,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 12,
+          "name": "Rebanded F/S ASTRO 25 Rx Frequency",
+          "name_raw": "Rebanded F/S ASTRO 25 Rx Frequency",
+          "control": "text",
+          "value_type": "string",
+          "flags": 0,
+          "flags_hex": "0x0000",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 103,
+          "offset": 1034,
+          "bindings": [
+            {
+              "fid": 11768,
+              "group": "0xebe78c0",
+              "off": 4,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 2,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 13,
+          "name": "Rebanded F/S ASTRO 25 Rx Frequency",
+          "name_raw": "Rebanded F/S ASTRO 25 Rx Frequency ",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 77,
+          "offset": 1125,
+          "bindings": [
+            {
+              "fid": 11768,
+              "group": "0xebe78c0",
+              "off": 4,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 2,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 14,
+          "name": "Rebanded F/S ASTRO 25 Tx Frequency",
+          "name_raw": "Rebanded F/S ASTRO 25 Tx Frequency",
+          "control": "text",
+          "value_type": "string",
+          "flags": 0,
+          "flags_hex": "0x0000",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 103,
+          "offset": 1217,
+          "match": "missing",
+          "bindings": []
+        },
+        {
+          "index": 15,
+          "name": "OBT Failsoft Enable",
+          "name_raw": "OBT Failsoft Enable",
+          "control": "checkbox",
+          "value_type": "bool",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 153,
+          "type_code": 4,
+          "width": 50,
+          "offset": 1308,
+          "bindings": [
+            {
+              "fid": 10556,
+              "group": "0xebe7e60",
+              "off": 0,
+              "bits": 1,
+              "msb": 6,
+              "table_score": 3,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 16,
+          "name": "F/S Type II Rx Freq",
+          "name_raw": "F/S Type II Rx Freq",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 60,
+          "offset": 1381,
+          "bindings": [
+            {
+              "fid": 10571,
+              "group": "0xebe7e60",
+              "off": 3,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 3,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 17,
+          "name": "F/S Type II Rx Freq",
+          "name_raw": "F/S Type II Rx Freq",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 60,
+          "offset": 1457,
+          "bindings": [
+            {
+              "fid": 10571,
+              "group": "0xebe7e60",
+              "off": 3,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 3,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 18,
+          "name": "F/S Type II Tx Freq",
+          "name_raw": "F/S Type II Tx Freq",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 60,
+          "offset": 1533,
+          "bindings": [
+            {
+              "fid": 10572,
+              "group": "0xebe7e60",
+              "off": 1,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 3,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 19,
+          "name": "F/S Type II Tx Freq",
+          "name_raw": "F/S Type II Tx Freq",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 60,
+          "offset": 1609,
+          "bindings": [
+            {
+              "fid": 10572,
+              "group": "0xebe7e60",
+              "off": 1,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 3,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 20,
+          "name": "Secure/Clear Strapping",
+          "name_raw": "Secure/Clear Strapping",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 70,
+          "offset": 1685,
+          "bindings": [
+            {
+              "fid": 10609,
+              "group": "0xebe8be0",
+              "off": 2,
+              "bits": 2,
+              "msb": 1,
+              "table_score": 4,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 21,
+          "name": "Tx Voice/Signal Type",
+          "name_raw": "Tx Voice/Signal Type",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 56,
+          "offset": 1764,
+          "bindings": [
+            {
+              "fid": 10866,
+              "group": "0xebe8be0",
+              "off": 2,
+              "bits": 1,
+              "msb": 3,
+              "table_score": 4,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 22,
+          "name": "Key Select",
+          "name_raw": "Key Select",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 60,
+          "offset": 1841,
+          "bindings": [
+            {
+              "fid": 10858,
+              "group": "0xebe8be0",
+              "off": 3,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 4,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 23,
+          "name": "F/S Enable",
+          "name_raw": "F/S Enable",
+          "control": "checkbox",
+          "value_type": "bool",
+          "flags": 0,
+          "flags_hex": "0x0000",
+          "format_code": 153,
+          "type_code": 4,
+          "width": 50,
+          "offset": 1908,
+          "bindings": [
+            {
+              "fid": 11719,
+              "group": "0xebe75f0",
+              "off": 0,
+              "bits": 1,
+              "msb": 7,
+              "table_score": 5,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 24,
+          "name": "F/S Chan Bandwidth (kHz)",
+          "name_raw": "F/S Chan Bandwidth (kHz)",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 67,
+          "offset": 1972,
+          "bindings": [
+            {
+              "fid": 11718,
+              "group": "0xebe75f0",
+              "off": 1,
+              "bits": 8,
+              "msb": 7,
+              "table_score": 5,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 25,
+          "name": "F/S Tx Deviation (kHz)",
+          "name_raw": "F/S Tx Deviation (kHz)",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 60,
+          "offset": 2053,
+          "bindings": [
+            {
+              "fid": 11720,
+              "group": "0xebe75f0",
+              "off": 0,
+              "bits": 2,
+              "msb": 1,
+              "table_score": 5,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 26,
+          "name": "F/S ASTRO 25 Rx Freq (MHz)",
+          "name_raw": "F/S ASTRO 25 Rx Freq (MHz)",
+          "control": "text",
+          "value_type": "string",
+          "flags": 0,
+          "flags_hex": "0x0000",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 80,
+          "offset": 2132,
+          "bindings": [
+            {
+              "fid": 11716,
+              "group": "0xebe75f0",
+              "off": 2,
+              "bits": 32,
+              "msb": 7,
+              "table_score": 5,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 27,
+          "name": "F/S ASTRO 25 Rx Freq (MHz)",
+          "name_raw": "F/S ASTRO 25 Rx Freq (MHz)",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 80,
+          "offset": 2215,
+          "bindings": [
+            {
+              "fid": 11716,
+              "group": "0xebe75f0",
+              "off": 2,
+              "bits": 32,
+              "msb": 7,
+              "table_score": 5,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 28,
+          "name": "F/S ASTRO 25 Tx Freq (MHz)",
+          "name_raw": "F/S ASTRO 25 Tx Freq (MHz)",
+          "control": "text",
+          "value_type": "string",
+          "flags": 0,
+          "flags_hex": "0x0000",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 80,
+          "offset": 2298,
+          "bindings": [
+            {
+              "fid": 11717,
+              "group": "0xebe75f0",
+              "off": 6,
+              "bits": 32,
+              "msb": 7,
+              "table_score": 5,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 29,
+          "name": "F/S ASTRO 25 Tx Freq (MHz)",
+          "name_raw": "F/S ASTRO 25 Tx Freq (MHz)",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 80,
+          "offset": 2381,
+          "bindings": [
+            {
+              "fid": 11717,
+              "group": "0xebe75f0",
+              "off": 6,
+              "bits": 32,
+              "msb": 7,
+              "table_score": 5,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 30,
+          "name": "WACN ID",
+          "name_raw": "WACN ID",
+          "control": "text",
+          "value_type": "string",
+          "flags": 0,
+          "flags_hex": "0x0000",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 60,
+          "offset": 2464,
+          "bindings": [
+            {
+              "fid": 14610,
+              "group": "0xebe8d90",
+              "off": 7,
+              "bits": 32,
+              "msb": 7,
+              "table_score": 3,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 31,
+          "name": "P25 System ID",
+          "name_raw": "P25 System ID",
+          "control": "text",
+          "value_type": "string",
+          "flags": 0,
+          "flags_hex": "0x0000",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 60,
+          "offset": 2528,
+          "bindings": [
+            {
+              "fid": 14601,
+              "group": "0xebe8d90",
+              "off": 5,
+              "bits": 16,
+              "msb": 7,
+              "table_score": 3,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        }
+      ],
+      "primary_group": "0xebe75f0",
+      "primary_group_columns": 5,
+      "matched_groups": [
+        {
+          "group": "0xebe75f0",
+          "columns": 5,
+          "fields": 5,
+          "unique_names": 5,
+          "group_coverage": 1.0
+        },
+        {
+          "group": "0xebe8be0",
+          "columns": 4,
+          "fields": 4,
+          "unique_names": 4,
+          "group_coverage": 1.0
+        },
+        {
+          "group": "0xebe8d90",
+          "columns": 3,
+          "fields": 6,
+          "unique_names": 6,
+          "group_coverage": 0.5
+        },
+        {
+          "group": "0xebe7e60",
+          "columns": 3,
+          "fields": 4,
+          "unique_names": 4,
+          "group_coverage": 0.75
+        },
+        {
+          "group": "0xebe7cb0",
+          "columns": 3,
+          "fields": 3,
+          "unique_names": 3,
+          "group_coverage": 1.0
+        },
+        {
+          "group": "0x40aa9d8",
+          "columns": 2,
+          "fields": 111,
+          "unique_names": 111,
+          "group_coverage": 0.018
+        },
+        {
+          "group": "0xebe78c0",
+          "columns": 2,
+          "fields": 5,
+          "unique_names": 5,
+          "group_coverage": 0.4
+        },
+        {
+          "group": "0xf19cc90",
+          "columns": 2,
+          "fields": 5,
+          "unique_names": 5,
+          "group_coverage": 0.4
+        },
+        {
+          "group": "0xebe7830",
+          "columns": 2,
+          "fields": 3,
+          "unique_names": 3,
+          "group_coverage": 0.667
+        },
+        {
+          "group": "0x107feb08",
+          "columns": 1,
+          "fields": 7,
+          "unique_names": 7,
+          "group_coverage": 0.143
+        },
+        {
+          "group": "0xf19c420",
+          "columns": 1,
+          "fields": 5,
+          "unique_names": 5,
+          "group_coverage": 0.2
+        },
+        {
+          "group": "0x40aba28",
+          "columns": 1,
+          "fields": 4,
+          "unique_names": 4,
+          "group_coverage": 0.25
+        },
+        {
+          "group": "0xebe8490",
+          "columns": 1,
+          "fields": 3,
+          "unique_names": 3,
+          "group_coverage": 0.333
+        },
+        {
+          "group": "0x107fe9e8",
+          "columns": 1,
+          "fields": 2,
+          "unique_names": 2,
+          "group_coverage": 0.5
+        }
+      ],
+      "bound_column_count": 31,
+      "ambiguous_column_count": 0,
+      "missing_column_count": 1,
+      "binding_coverage": 0.969,
+      "primary_block_id": null,
+      "primary_block_name": null
+    },
+    {
+      "key": "test_channel_list",
+      "title": "Test Channel List",
+      "file": "Test Channel List.tbl",
+      "size": 241,
+      "sha256": "70351fda3740a0b8ffe5ddfe0b6436c8a279d37683534adc5a79c7fdfdd391ed",
+      "block_id": 42,
+      "block_name": "Test Channel Table Block",
+      "core_section": "test_channel_list",
+      "core_section_tags": [
+        "0x0FF0",
+        "0x0FF1"
+      ],
+      "mapping_confidence": "inferred",
+      "column_count": 2,
+      "text_column_count": 2,
+      "checkbox_column_count": 0,
+      "layout_rows": 20,
+      "layout_groups": 1,
+      "duplicate_column_names": [],
+      "columns": [
+        {
+          "index": 0,
+          "name": "Test Tx Freq(MHz)",
+          "name_raw": "Test Tx Freq(MHz)",
+          "control": "text",
+          "value_type": "string",
+          "flags": 4,
+          "flags_hex": "0x0004",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 40,
+          "offset": 85,
+          "match": "missing",
+          "bindings": []
+        },
+        {
+          "index": 1,
+          "name": "Test Rx Freq(MHz)",
+          "name_raw": "Test Rx Freq(MHz)",
+          "control": "text",
+          "value_type": "string",
+          "flags": 0,
+          "flags_hex": "0x0000",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 40,
+          "offset": 159,
+          "match": "missing",
+          "bindings": []
+        }
+      ],
+      "primary_group": null,
+      "primary_group_columns": 0,
+      "matched_groups": [],
+      "bound_column_count": 0,
+      "ambiguous_column_count": 0,
+      "missing_column_count": 2,
+      "binding_coverage": 0.0,
+      "primary_block_id": null,
+      "primary_block_name": null
+    },
+    {
+      "key": "trunking_message_alias",
+      "title": "Trunking Message Alias Table in Trunking System",
+      "file": "Trunking Message Alias Table in Trunking System.tbl",
+      "size": 245,
+      "sha256": "400a483e7d68c46281a211cfb12c130f1e179364d78ed2fafad959d7516cd78d",
+      "block_id": 115,
+      "block_name": "Trk Message Alias Block",
+      "core_section": "trunking_system",
+      "core_section_tags": [
+        "0x0FAA"
+      ],
+      "mapping_confidence": "inferred",
+      "column_count": 2,
+      "text_column_count": 2,
+      "checkbox_column_count": 0,
+      "layout_rows": 0,
+      "layout_groups": 0,
+      "duplicate_column_names": [],
+      "columns": [
+        {
+          "index": 0,
+          "name": "Message Alias Number",
+          "name_raw": "Message Alias Number",
+          "control": "text",
+          "value_type": "string",
+          "flags": 0,
+          "flags_hex": "0x0000",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 60,
+          "offset": 85,
+          "bindings": [
+            {
+              "fid": 11101,
+              "group": "0xebe8760",
+              "off": 0,
+              "bits": 8,
+              "msb": 7,
+              "table_score": 1,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 1,
+          "name": "Message Alias Text",
+          "name_raw": "Message Alias Text",
+          "control": "text",
+          "value_type": "string",
+          "flags": 0,
+          "flags_hex": "0x0000",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 51,
+          "offset": 162,
+          "bindings": [
+            {
+              "fid": 11116,
+              "group": "0xebe8910",
+              "off": 0,
+              "bits": 136,
+              "msb": 7,
+              "table_score": 1,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        }
+      ],
+      "primary_group": "0xf1a6a70",
+      "primary_group_columns": 1,
+      "matched_groups": [
+        {
+          "group": "0xf1a6a70",
+          "columns": 1,
+          "fields": 1,
+          "unique_names": 1,
+          "group_coverage": 1.0
+        },
+        {
+          "group": "0xebe8760",
+          "columns": 1,
+          "fields": 1,
+          "unique_names": 1,
+          "group_coverage": 1.0
+        },
+        {
+          "group": "0x40aad38",
+          "columns": 1,
+          "fields": 1,
+          "unique_names": 1,
+          "group_coverage": 1.0
+        },
+        {
+          "group": "0xebe8910",
+          "columns": 1,
+          "fields": 1,
+          "unique_names": 1,
+          "group_coverage": 1.0
+        }
+      ],
+      "bound_column_count": 2,
+      "ambiguous_column_count": 0,
+      "missing_column_count": 0,
+      "binding_coverage": 1.0,
+      "primary_block_id": null,
+      "primary_block_name": null
+    },
+    {
+      "key": "trunking_site_alias",
+      "title": "Trunking Site Alias Table in Trunking System",
+      "file": "Trunking Site Alias Table in Trunking System.tbl",
+      "size": 239,
+      "sha256": "c7d8ca9f700689cdd63d999cc780b7844d1d28e41b4ef8da6c7f19f651b05695",
+      "block_id": 117,
+      "block_name": "Trk Site Alias Block",
+      "core_section": "trunking_system",
+      "core_section_tags": [
+        "0x0FE6"
+      ],
+      "mapping_confidence": "inferred",
+      "column_count": 2,
+      "text_column_count": 2,
+      "checkbox_column_count": 0,
+      "layout_rows": 0,
+      "layout_groups": 0,
+      "duplicate_column_names": [],
+      "columns": [
+        {
+          "index": 0,
+          "name": "Site Alias Number",
+          "name_raw": "Site Alias Number",
+          "control": "text",
+          "value_type": "string",
+          "flags": 0,
+          "flags_hex": "0x0000",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 60,
+          "offset": 85,
+          "bindings": [
+            {
+              "fid": 11102,
+              "group": "0xf19ce40",
+              "off": 1,
+              "bits": 8,
+              "msb": 7,
+              "table_score": 1,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 1,
+          "name": "Site Alias Text",
+          "name_raw": "Site Alias Text",
+          "control": "text",
+          "value_type": "string",
+          "flags": 0,
+          "flags_hex": "0x0000",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 51,
+          "offset": 159,
+          "bindings": [
+            {
+              "fid": 11117,
+              "group": "0xf19c810",
+              "off": 0,
+              "bits": 136,
+              "msb": 7,
+              "table_score": 1,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        }
+      ],
+      "primary_group": "0xf19ce40",
+      "primary_group_columns": 1,
+      "matched_groups": [
+        {
+          "group": "0xf19ce40",
+          "columns": 1,
+          "fields": 1,
+          "unique_names": 1,
+          "group_coverage": 1.0
+        },
+        {
+          "group": "0xf19c810",
+          "columns": 1,
+          "fields": 1,
+          "unique_names": 1,
+          "group_coverage": 1.0
+        }
+      ],
+      "bound_column_count": 2,
+      "ambiguous_column_count": 0,
+      "missing_column_count": 0,
+      "binding_coverage": 1.0,
+      "primary_block_id": null,
+      "primary_block_name": null
+    },
+    {
+      "key": "trunking_status_alias",
+      "title": "Trunking Status Alias Table in Trunking System",
+      "file": "Trunking Status Alias Table in Trunking System.tbl",
+      "size": 243,
+      "sha256": "8500ece186ec733b22df514e294fc912f58a94f92e6397ab1702fde25f3c2992",
+      "block_id": 113,
+      "block_name": "Trk Status Alias Block",
+      "core_section": "trunking_system",
+      "core_section_tags": [
+        "0x0059"
+      ],
+      "mapping_confidence": "inferred",
+      "column_count": 2,
+      "text_column_count": 2,
+      "checkbox_column_count": 0,
+      "layout_rows": 0,
+      "layout_groups": 0,
+      "duplicate_column_names": [],
+      "columns": [
+        {
+          "index": 0,
+          "name": "Status Alias Number",
+          "name_raw": "Status Alias Number",
+          "control": "text",
+          "value_type": "string",
+          "flags": 0,
+          "flags_hex": "0x0000",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 60,
+          "offset": 85,
+          "bindings": [
+            {
+              "fid": 11103,
+              "group": "0xebe81c0",
+              "off": 0,
+              "bits": 8,
+              "msb": 7,
+              "table_score": 1,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        },
+        {
+          "index": 1,
+          "name": "Status Alias Text",
+          "name_raw": "Status Alias Text",
+          "control": "text",
+          "value_type": "string",
+          "flags": 0,
+          "flags_hex": "0x0000",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 51,
+          "offset": 161,
+          "bindings": [
+            {
+              "fid": 11118,
+              "group": "0xebe7b00",
+              "off": 0,
+              "bits": 136,
+              "msb": 7,
+              "table_score": 1,
+              "block_id": null,
+              "block_name": null
+            }
+          ],
+          "match": "bound"
+        }
+      ],
+      "primary_group": "0xf1a6cb0",
+      "primary_group_columns": 1,
+      "matched_groups": [
+        {
+          "group": "0xf1a6cb0",
+          "columns": 1,
+          "fields": 1,
+          "unique_names": 1,
+          "group_coverage": 1.0
+        },
+        {
+          "group": "0xebe81c0",
+          "columns": 1,
+          "fields": 1,
+          "unique_names": 1,
+          "group_coverage": 1.0
+        },
+        {
+          "group": "0xf1a6560",
+          "columns": 1,
+          "fields": 1,
+          "unique_names": 1,
+          "group_coverage": 1.0
+        },
+        {
+          "group": "0xebe7b00",
+          "columns": 1,
+          "fields": 1,
+          "unique_names": 1,
+          "group_coverage": 1.0
+        }
+      ],
+      "bound_column_count": 2,
+      "ambiguous_column_count": 0,
+      "missing_column_count": 0,
+      "binding_coverage": 1.0,
+      "primary_block_id": null,
+      "primary_block_name": null
+    },
+    {
+      "key": "radio_configuration_features",
+      "title": "View Radio Configuration Features",
+      "file": "View Radio Configuration Features.tbl",
+      "size": 235,
+      "sha256": "4dc4332070eb55d3a592a942dd1781327b48a6a868805ec080f7dff80fe2ba45",
+      "block_id": null,
+      "block_name": null,
+      "core_section": "radio_information",
+      "core_section_tags": [
+        "0x1004",
+        "0x1005",
+        "0x1006"
+      ],
+      "mapping_confidence": "inferred",
+      "column_count": 2,
+      "text_column_count": 2,
+      "checkbox_column_count": 0,
+      "layout_rows": 0,
+      "layout_groups": 0,
+      "duplicate_column_names": [],
+      "columns": [
+        {
+          "index": 0,
+          "name": "FLASHcode Information",
+          "name_raw": "FLASHcode Information",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 40,
+          "offset": 85,
+          "match": "bound",
+          "bindings": [
+            {
+              "fid": 14152,
+              "group": "0xf62f6f0",
+              "off": 8,
+              "bits": 128,
+              "msb": 7,
+              "table_score": 0,
+              "block_id": null,
+              "block_name": null
+            }
+          ]
+        },
+        {
+          "index": 1,
+          "name": "Current",
+          "name_raw": "Current",
+          "control": "text",
+          "value_type": "string",
+          "flags": 8,
+          "flags_hex": "0x0008",
+          "format_code": 135,
+          "type_code": 76,
+          "width": 40,
+          "offset": 163,
+          "match": "missing",
+          "bindings": []
+        }
+      ],
+      "primary_group": null,
+      "primary_group_columns": 0,
+      "matched_groups": [],
+      "bound_column_count": 1,
+      "ambiguous_column_count": 0,
+      "missing_column_count": 1,
+      "binding_coverage": 0.5,
+      "primary_block_id": null,
+      "primary_block_name": null
+    }
+  ]
+}

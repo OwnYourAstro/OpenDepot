@@ -54,8 +54,10 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <string>
 #include <vector>
 
+#include "opendepot/core/field_catalog.h"
 #include "opendepot/core/model.h"
 #include "opendepot/core/radio.h"
 
@@ -68,6 +70,8 @@ constexpr int kDiffPage = 4;
 constexpr int kRadioPage = 5;
 constexpr int kSectionPage = 6;
 constexpr int kRadioWidePage = 7;
+constexpr int kCatalogPage = 8;
+constexpr int kCpsTablesPage = 9;
 constexpr int kRolePage = Qt::UserRole;
 constexpr int kRoleSection = Qt::UserRole + 1;
 constexpr int kRoleZone = Qt::UserRole + 2;
@@ -268,6 +272,8 @@ void MainWindow::setupUi() {
     pages_->addWidget(buildRadioPage());
     pages_->addWidget(buildSectionPage());
     pages_->addWidget(buildRadioWidePage());
+    pages_->addWidget(buildFieldCatalogPage());
+    pages_->addWidget(buildCpsTablesPage());
     pages_->setCurrentIndex(kInfoPage);
     root->addWidget(pages_, 1);
 
@@ -296,7 +302,9 @@ void MainWindow::buildTree() {
     const ToolItem toolItems[] = {{"Service Report", kReportPage},
                                   {"Codeplug Doctor", kDoctorPage},
                                   {"Diff", kDiffPage},
-                                  {"Radio", kRadioPage}};
+                                  {"Radio", kRadioPage},
+                                  {"CPS Tables", kCpsTablesPage},
+                                  {"Field Catalog", kCatalogPage}};
     for (const auto& t : toolItems) {
         auto* it = new QTreeWidgetItem(tools, QStringList{QString::fromLatin1(t.name)});
         it->setIcon(0, style()->standardIcon(QStyle::SP_FileIcon));
@@ -372,7 +380,9 @@ void MainWindow::buildModelTree() {
     const ToolItem toolItems[] = {{"Service Report", kReportPage},
                                   {"Codeplug Doctor", kDoctorPage},
                                   {"Diff", kDiffPage},
-                                  {"Radio", kRadioPage}};
+                                  {"Radio", kRadioPage},
+                                  {"CPS Tables", kCpsTablesPage},
+                                  {"Field Catalog", kCatalogPage}};
     for (const auto& t : toolItems) {
         auto* it = new QTreeWidgetItem(tools, QStringList{QString::fromLatin1(t.name)});
         it->setIcon(0, style()->standardIcon(QStyle::SP_FileIcon));
@@ -585,6 +595,7 @@ QWidget* MainWindow::buildZonesPage() {
 
 QWidget* MainWindow::buildRadioWidePage() {
     auto* page = new QWidget;
+    rwBound_.clear();
     auto* lay = new QVBoxLayout(page);
     lay->setContentsMargins(32, 26, 32, 32);
     lay->setSpacing(10);
@@ -632,10 +643,15 @@ QWidget* MainWindow::buildRadioWidePage() {
     auto* fl = new QGridLayout(flags);
     fl->setHorizontalSpacing(18);
     fl->setVerticalSpacing(8);
+    auto bindField = [&](const char* name, QWidget* widget) {
+        rwBound_.insert(QString::fromLatin1(name), widget);
+        widget->setEnabled(true);
+    };
     auto addCheck = [&](const char* text, int row, int col) {
         auto* cb = new QCheckBox(QString::fromLatin1(text));
-        cb->setEnabled(false);
         fl->addWidget(cb, row, col);
+        bindField(text, cb);
+        return cb;
     };
     addCheck("Radio Cloning", 0, 0);
     addCheck("Block Pending CA/PC", 0, 1);
@@ -652,22 +668,23 @@ QWidget* MainWindow::buildRadioWidePage() {
             &MainWindow::setMaxChannels);
     fl->addWidget(rwMaxChannels_, 4, 1);
 
-    auto addCombo = [&](const char* label, int row) {
+    auto addCombo = [&](const char* label, const char* field, int row) {
         fl->addWidget(new QLabel(QString::fromLatin1(label)), row, 0);
         auto* cb = new QComboBox;
-        cb->addItems({"No Indication", "Display Only", "Display and Tone"});
-        cb->setEnabled(false);
+        cb->setSizeAdjustPolicy(QComboBox::AdjustToContents);
         fl->addWidget(cb, row, 1);
+        bindField(field, cb);
+        return cb;
     };
-    addCombo("Out of Range Indicator:", 5);
-    addCombo("Imbalanced Coverage Indicator:", 6);
-    addCombo("System Registration Indicator:", 7);
-    addCombo("Time Format:", 8);
-    addCombo("Date Format:", 9);
-    addCombo("Channel Announcement Priority:", 10);
+    addCombo("Out of Range Indicator:", "Out of Range Indicator", 5);
+    addCombo("Imbalanced Coverage Indicator:", "Imbalanced Coverage Indicator", 6);
+    addCombo("System Registration Indicator:", "System Registration Indicator", 7);
+    addCombo("Time Format:", "Time format", 8);
+    addCombo("Date Format:", "Date Format", 9);
+    addCombo("Channel Announcement Priority:", "Channel Announcement Priority", 10);
     auto* chanAnn = new QCheckBox("Channel Announcement");
-    chanAnn->setEnabled(false);
     fl->addWidget(chanAnn, 11, 0);
+    bindField("Channel Announcement", chanAnn);
     cl->addWidget(flags);
 
     auto* power = new QGroupBox("Power Management");
@@ -687,51 +704,50 @@ QWidget* MainWindow::buildRadioWidePage() {
     auto* user = new QGroupBox("User Information");
     auto* ul = new QGridLayout(user);
     auto* ars = new QCheckBox("ARS User Login Enable");
-    ars->setEnabled(false);
     ul->addWidget(ars, 0, 0, 1, 2);
+    bindField("ARS User Login Enable", ars);
     ul->addWidget(new QLabel("Soft ID/Username:"), 1, 0);
     auto* soft = new QLineEdit;
     soft->setEnabled(false);
     ul->addWidget(soft, 1, 1);
     ul->addWidget(new QLabel("PIN/Password:"), 2, 0);
     auto* pin = new QLineEdit;
-    pin->setEnabled(false);
     pin->setEchoMode(QLineEdit::Password);
     ul->addWidget(pin, 2, 1);
+    bindField("Protected Zone Password", pin);
     auto* unitEnable = new QCheckBox("User Login Unit ID Enable");
-    unitEnable->setEnabled(false);
     ul->addWidget(unitEnable, 3, 0, 1, 2);
+    bindField("User Login Unit ID Enable", unitEnable);
     ul->addWidget(new QLabel("User Login Unit ID:"), 4, 0);
     auto* unit = new QLineEdit;
-    unit->setEnabled(false);
     ul->addWidget(unit, 4, 1);
+    bindField("User Login Unit ID", unit);
     ul->addWidget(new QLabel("Cached Credential User Login Mode:"), 5, 0);
     auto* cached = new QComboBox;
-    cached->setEnabled(false);
     ul->addWidget(cached, 5, 1);
+    bindField("Cached Credential User Login Mode", cached);
     auto* aliasEnable = new QCheckBox("Radio ID Alias Enable");
-    aliasEnable->setEnabled(false);
     ul->addWidget(aliasEnable, 6, 0, 1, 2);
+    bindField("Radio ID Alias Enable", aliasEnable);
     ul->addWidget(new QLabel("Radio ID Alias:"), 7, 0);
     auto* alias = new QLineEdit;
-    alias->setEnabled(false);
     ul->addWidget(alias, 7, 1);
+    bindField("Radio ID Alias", alias);
     cl->addWidget(user);
 
     auto* owner = new QGroupBox("Owner ID and Write Protect");
     auto* ol = new QGridLayout(owner);
     ol->addWidget(new QLabel("Key Type"), 0, 0);
     auto* keyType = new QComboBox;
-    keyType->addItem("None");
-    keyType->setEnabled(false);
     ol->addWidget(keyType, 0, 1);
+    bindField("Key Type", keyType);
     ol->addWidget(new QLabel("Owner System ID"), 1, 0);
     auto* ownerId = new QLineEdit;
-    ownerId->setEnabled(false);
     ol->addWidget(ownerId, 1, 1);
+    bindField("Owner System ID", ownerId);
     auto* disableWp = new QCheckBox("Disable Write Protect");
-    disableWp->setEnabled(false);
     ol->addWidget(disableWp, 2, 0, 1, 2);
+    bindField("Disable Write Protect", disableWp);
     cl->addWidget(owner);
 
     cl->addStretch(1);
@@ -765,6 +781,23 @@ QWidget* MainWindow::buildRadioWidePage() {
             addPage(QString::fromLatin1(rows[row][col]), w, row, col);
         }
     }
+    auto* named = new QWidget;
+    auto* nl = new QVBoxLayout(named);
+    auto* namedHint = new QLabel(
+        "Every named Radio Wide field, decoded from record 0x000A / 0x000C using "
+        "the Depot field registry.");
+    namedHint->setObjectName("muted");
+    namedHint->setWordWrap(true);
+    nl->addWidget(namedHint);
+    rwNamedFields_ = new QTableWidget(0, 6);
+    rwNamedFields_->setHorizontalHeaderLabels({"Record", "Field", "Off", "Bits", "MSB", "Value"});
+    rwNamedFields_->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    rwNamedFields_->verticalHeader()->setVisible(false);
+    rwNamedFields_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    rwNamedFields_->setShowGrid(false);
+    nl->addWidget(rwNamedFields_, 1);
+    addPage("Named Fields", named, 4, 0);
+
     for (int col = 0; col < 7; ++col) tabGrid->setColumnStretch(col, 1);
     stack->setCurrentIndex(0);
     generalButton->setChecked(true);
@@ -802,6 +835,114 @@ void MainWindow::refreshRadioWidePage() {
     const QSignalBlocker block(rwMaxChannels_);
     rwMaxChannels_->setValue(value);
     rwMaxChannels_->setEnabled(haveRecord);
+
+    size_t allFieldCount = 0;
+    const auto* allFields = opendepot::FieldCatalog(allFieldCount);
+    for (auto it = rwBound_.cbegin(); it != rwBound_.cend(); ++it) {
+        const opendepot::FieldDef* field = nullptr;
+        for (size_t i = 0; i < allFieldCount; ++i) {
+            const auto& candidate = allFields[i];
+            const QString group = QString::fromLatin1(candidate.group ? candidate.group : "");
+            if (group != "0xf1a8450" && group != "0xf1a7a30") continue;
+            if (it.key() == QString::fromLatin1(candidate.name ? candidate.name : "")) {
+                field = &candidate;
+                break;
+            }
+        }
+        if (!field || field->bits == 0) continue;
+        const uint16_t tag = QString::fromLatin1(field->group) == "0xf1a8450" ? 0x000A : 0x000C;
+        const auto* record = FindRecord(cp_, tag, 0);
+        if (!record) continue;
+        const auto payload = RecordPayload(*record);
+        if (size_t(field->off) + size_t((field->bits + 7) / 8) > payload.size()) continue;
+        const uint64_t raw = opendepot::ReadFieldBits(payload.data(), payload.size(), field->off,
+                                                      field->bits, field->msb);
+        QWidget* widget = it.value();
+        if (auto* cb = qobject_cast<QCheckBox*>(widget)) {
+            cb->setChecked(raw != 0);
+            cb->setEnabled(true);
+        } else if (auto* combo = qobject_cast<QComboBox*>(widget)) {
+            if (combo->count() == 0) {
+                const QString key = it.key();
+                QStringList options;
+                if (key == "Out of Range Indicator" || key == "Imbalanced Coverage Indicator" ||
+                    key == "System Registration Indicator") {
+                    options = {"No Indication", "Alert Only", "Display Only", "Alert & Display"};
+                } else if (key == "Time format") {
+                    options = {"12 Hour", "24 Hour", "12 Hour with Seconds",
+                               "24 Hour with Seconds"};
+                } else if (key == "Date Format") {
+                    options = {"MM/DD/YYYY", "DD/MM/YYYY", "YYYY/MM/DD", "MM/DD/YY"};
+                } else if (key == "Channel Announcement Priority") {
+                    options = {"Normal", "High"};
+                } else {
+                    const uint64_t values = field->bits >= 5 ? 32 : (uint64_t(1) << field->bits);
+                    for (uint64_t i = 0; i < values; ++i) options << QString::number(i);
+                }
+                combo->addItems(options);
+            }
+            const int index = static_cast<int>(raw);
+            while (combo->count() <= index) combo->addItem(QString::number(combo->count()));
+            combo->setCurrentIndex(index);
+            combo->setEnabled(true);
+        } else if (auto* edit = qobject_cast<QLineEdit*>(widget)) {
+            QString text;
+            if (field->bits >= 8) {
+                const size_t bytes = size_t(field->bits + 7) / 8;
+                std::string s;
+                for (size_t i = 0; i < bytes && field->off + i < payload.size(); ++i) {
+                    const uint8_t c = payload[field->off + i];
+                    if (c == 0) break;
+                    s.push_back(char(c));
+                }
+                text = QString::fromLatin1(s.c_str());
+            }
+            if (text.isEmpty()) text = QString::number(static_cast<qulonglong>(raw));
+            edit->setText(text);
+            edit->setEnabled(true);
+        } else if (auto* spin = qobject_cast<QSpinBox*>(widget)) {
+            spin->setValue(static_cast<int>(raw));
+            spin->setEnabled(true);
+        }
+    }
+
+    if (!rwNamedFields_) return;
+    rwNamedFields_->setRowCount(0);
+    size_t fieldCount = 0;
+    const auto* fields = opendepot::FieldCatalog(fieldCount);
+    for (size_t i = 0; i < fieldCount; ++i) {
+        const auto& field = fields[i];
+        uint16_t tag = 0;
+        if (std::string(field.group ? field.group : "") == "0xf1a8450") {
+            tag = 0x000A;
+        } else if (std::string(field.group ? field.group : "") == "0xf1a7a30") {
+            tag = 0x000C;
+        } else {
+            continue;
+        }
+        const auto* record = FindRecord(cp_, tag, 0);
+        if (!record) continue;
+        const auto payload = RecordPayload(*record);
+        const int row = rwNamedFields_->rowCount();
+        rwNamedFields_->insertRow(row);
+        rwNamedFields_->setItem(row, 0,
+                                new QTableWidgetItem(QString("0x%1").arg(tag, 4, 16, QChar('0'))));
+        rwNamedFields_->setItem(
+            row, 1, new QTableWidgetItem(QString::fromUtf8(field.name ? field.name : "")));
+        rwNamedFields_->setItem(row, 2, new QTableWidgetItem(QString::number(field.off)));
+        rwNamedFields_->setItem(row, 3, new QTableWidgetItem(QString::number(field.bits)));
+        rwNamedFields_->setItem(row, 4, new QTableWidgetItem(QString::number(field.msb)));
+        QString valueText = "-";
+        if (field.bits > 0) {
+            const uint64_t bits =
+                opendepot::ReadFieldBits(payload.data(), payload.size(), field.off, field.bits,
+                                         field.msb);
+            valueText = field.bits > 32
+                            ? QString("0x%1").arg(static_cast<qulonglong>(bits), 0, 16)
+                            : QString::number(static_cast<qulonglong>(bits));
+        }
+        rwNamedFields_->setItem(row, 5, new QTableWidgetItem(valueText));
+    }
 }
 
 void MainWindow::setMaxChannels(int value) {
@@ -815,6 +956,507 @@ void MainWindow::setMaxChannels(int value) {
     if (!model_->SetRecordPayload(0x000A, 0, p)) return;
     refreshAfterEdit();
     statusBar()->showMessage("Maximum Channels updated in memory - File > Save to keep it.", 8000);
+}
+
+QWidget* MainWindow::buildFieldCatalogPage() {
+    auto* page = new QWidget;
+    auto* lay = new QVBoxLayout(page);
+    lay->setContentsMargins(32, 26, 32, 32);
+    lay->setSpacing(12);
+
+    auto* title = new QLabel("Field Catalog");
+    title->setObjectName("pageTitle");
+    lay->addWidget(title);
+
+    size_t fieldCount = 0;
+    opendepot::FieldCatalog(fieldCount);
+    size_t tableCount = 0;
+    const auto* tables = opendepot::TableCatalog(tableCount);
+    size_t columnCount = 0;
+    size_t boundCount = 0;
+    for (size_t i = 0; i < tableCount; ++i) {
+        columnCount += tables[i].columnCount;
+        boundCount += tables[i].boundColumnCount;
+    }
+    auto* subtitle = new QLabel(
+        QString("%1 fields · %2 tables · %3/%4 columns bound")
+            .arg(static_cast<qulonglong>(fieldCount))
+            .arg(static_cast<qulonglong>(tableCount))
+            .arg(static_cast<qulonglong>(boundCount))
+            .arg(static_cast<qulonglong>(columnCount)));
+    subtitle->setObjectName("muted");
+    lay->addWidget(subtitle);
+
+    catalogTables_ = new QTableWidget(0, 4);
+    catalogTables_->setHorizontalHeaderLabels({"Table", "Core section", "Columns", "Bound"});
+    catalogTables_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+    catalogTables_->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    catalogTables_->verticalHeader()->setVisible(false);
+    catalogTables_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    catalogTables_->setSelectionBehavior(QAbstractItemView::SelectRows);
+    catalogTables_->setSelectionMode(QAbstractItemView::SingleSelection);
+    catalogTables_->setShowGrid(false);
+    catalogTables_->setMaximumHeight(240);
+
+    catalogColumns_ = new QTableWidget(0, 9);
+    catalogColumns_->setHorizontalHeaderLabels(
+        {"#", "Column", "Match", "Field", "Name", "Group", "Off", "Bits", "MSB"});
+    catalogColumns_->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    catalogColumns_->horizontalHeader()->setSectionResizeMode(4, QHeaderView::Stretch);
+    catalogColumns_->verticalHeader()->setVisible(false);
+    catalogColumns_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    catalogColumns_->setSelectionBehavior(QAbstractItemView::SelectRows);
+    catalogColumns_->setShowGrid(false);
+
+    for (size_t i = 0; i < tableCount; ++i) {
+        const auto& table = tables[i];
+        const int row = catalogTables_->rowCount();
+        catalogTables_->insertRow(row);
+        catalogTables_->setItem(row, 0, new QTableWidgetItem(QString::fromUtf8(table.title)));
+        catalogTables_->setItem(row, 1, new QTableWidgetItem(QString::fromUtf8(
+            table.coreSection ? table.coreSection : "-")));
+        catalogTables_->setItem(row, 2,
+                                new QTableWidgetItem(QString::number(table.columnCount)));
+        catalogTables_->setItem(row, 3,
+                                new QTableWidgetItem(QString::number(table.boundColumnCount)));
+    }
+    connect(catalogTables_, &QTableWidget::itemSelectionChanged, this, [this] {
+        fillFieldCatalog(catalogTables_->currentRow());
+    });
+
+    lay->addWidget(new QLabel("Tables"));
+    lay->addWidget(catalogTables_);
+    lay->addWidget(new QLabel("Columns and field bindings"));
+    lay->addWidget(catalogColumns_, 1);
+    if (catalogTables_->rowCount() > 0) {
+        catalogTables_->selectRow(0);
+        fillFieldCatalog(0);
+    }
+    return page;
+}
+
+void MainWindow::fillFieldCatalog(int tableIndex) {
+    if (!catalogColumns_ || tableIndex < 0) return;
+    size_t tableCount = 0;
+    const auto* tables = opendepot::TableCatalog(tableCount);
+    if (size_t(tableIndex) >= tableCount) return;
+    const auto& table = tables[tableIndex];
+    catalogColumns_->setRowCount(0);
+    for (size_t c = 0; c < table.columnCount; ++c) {
+        const auto& column = table.columns[c];
+        if (column.bindingCount == 0) {
+            const int row = catalogColumns_->rowCount();
+            catalogColumns_->insertRow(row);
+            catalogColumns_->setItem(row, 0, new QTableWidgetItem(QString::number(c)));
+            catalogColumns_->setItem(row, 1,
+                                     new QTableWidgetItem(QString::fromUtf8(column.name)));
+            catalogColumns_->setItem(row, 2,
+                                     new QTableWidgetItem(QString::fromUtf8(column.match)));
+            for (int col = 3; col < 9; ++col)
+                catalogColumns_->setItem(row, col, new QTableWidgetItem("-"));
+            continue;
+        }
+        for (size_t b = 0; b < column.bindingCount; ++b) {
+            const auto& bind = column.bindings[b];
+            const auto* field = opendepot::FindField(bind.fid);
+            const int row = catalogColumns_->rowCount();
+            catalogColumns_->insertRow(row);
+            catalogColumns_->setItem(row, 0, new QTableWidgetItem(QString::number(c)));
+            catalogColumns_->setItem(row, 1,
+                                     new QTableWidgetItem(QString::fromUtf8(column.name)));
+            catalogColumns_->setItem(row, 2,
+                                     new QTableWidgetItem(QString::fromUtf8(column.match)));
+            catalogColumns_->setItem(row, 3, new QTableWidgetItem(QString::number(bind.fid)));
+            catalogColumns_->setItem(
+                row, 4, new QTableWidgetItem(QString::fromUtf8(
+                    field && field->name ? field->name : "")));
+            catalogColumns_->setItem(row, 5,
+                                     new QTableWidgetItem(QString::fromUtf8(bind.group)));
+            catalogColumns_->setItem(row, 6, new QTableWidgetItem(QString::number(bind.off)));
+            catalogColumns_->setItem(row, 7, new QTableWidgetItem(QString::number(bind.bits)));
+            catalogColumns_->setItem(row, 8, new QTableWidgetItem(QString::number(bind.msb)));
+        }
+    }
+}
+
+QWidget* MainWindow::buildCpsTablesPage() {
+    auto* page = new QWidget;
+    auto* lay = new QVBoxLayout(page);
+    lay->setContentsMargins(32, 26, 32, 32);
+    lay->setSpacing(12);
+
+    auto* title = new QLabel("CPS Tables");
+    title->setObjectName("pageTitle");
+    lay->addWidget(title);
+    auto* hint = new QLabel(
+        "CPS-style table pages. Zone Channel Assignment and alias tables read the "
+        "decoded codeplug model; tables without a row decoder show their columns "
+        "and field bindings.");
+    hint->setObjectName("muted");
+    hint->setWordWrap(true);
+    lay->addWidget(hint);
+
+    auto* split = new QHBoxLayout;
+    cpsTableList_ = new QTableWidget(0, 1);
+    cpsTableList_->setHorizontalHeaderLabels({"Table"});
+    cpsTableList_->horizontalHeader()->setStretchLastSection(true);
+    cpsTableList_->verticalHeader()->setVisible(false);
+    cpsTableList_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    cpsTableList_->setSelectionBehavior(QAbstractItemView::SelectRows);
+    cpsTableList_->setMaximumWidth(280);
+    size_t tableCount = 0;
+    const auto* tables = opendepot::TableCatalog(tableCount);
+    for (size_t i = 0; i < tableCount; ++i) {
+        const int row = cpsTableList_->rowCount();
+        cpsTableList_->insertRow(row);
+        cpsTableList_->setItem(row, 0, new QTableWidgetItem(QString::fromUtf8(tables[i].title)));
+    }
+    split->addWidget(cpsTableList_, 0);
+
+    auto* right = new QVBoxLayout;
+    cpsTableInfo_ = new QLabel;
+    cpsTableInfo_->setObjectName("muted");
+    cpsTableInfo_->setWordWrap(true);
+    right->addWidget(cpsTableInfo_);
+    cpsGrid_ = new QTableWidget;
+    cpsGrid_->verticalHeader()->setVisible(false);
+    cpsGrid_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    cpsGrid_->setShowGrid(false);
+    right->addWidget(cpsGrid_, 1);
+    split->addLayout(right, 1);
+    lay->addLayout(split, 1);
+
+    connect(cpsTableList_, &QTableWidget::itemSelectionChanged, this, [this] {
+        fillCpsTable(cpsTableList_->currentRow());
+    });
+    if (cpsTableList_->rowCount() > 0) {
+        int defaultRow = 0;
+        for (size_t i = 0; i < tableCount; ++i) {
+            if (QString::fromUtf8(tables[i].key) == "zone_channel_assignment") {
+                defaultRow = int(i);
+                break;
+            }
+        }
+        cpsTableList_->selectRow(defaultRow);
+        fillCpsTable(defaultRow);
+    }
+    return page;
+}
+
+void MainWindow::fillCpsTable(int tableIndex) {
+    if (!cpsGrid_ || tableIndex < 0) return;
+    size_t tableCount = 0;
+    const auto* tables = opendepot::TableCatalog(tableCount);
+    if (size_t(tableIndex) >= tableCount) return;
+    const auto& table = tables[tableIndex];
+
+    cpsGrid_->clear();
+    cpsGrid_->setRowCount(0);
+    cpsGrid_->setColumnCount(int(table.columnCount));
+    QStringList headers;
+    for (size_t c = 0; c < table.columnCount; ++c)
+        headers << QString::fromUtf8(table.columns[c].name);
+    cpsGrid_->setHorizontalHeaderLabels(headers);
+    cpsGrid_->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    cpsGrid_->horizontalHeader()->setStretchLastSection(false);
+
+    QString info = QString("%1 - %2 columns, %3 bound")
+                       .arg(QString::fromUtf8(table.title))
+                       .arg(table.columnCount)
+                       .arg(table.boundColumnCount);
+    const QString key = QString::fromUtf8(table.key);
+    if (key == "zone_channel_assignment" && model_) {
+        int rows = 0;
+        int rxSeen = 0;
+        int txSeen = 0;
+        for (const auto& zone : model_->Zones()) {
+            for (const auto& channel : zone.channels) {
+                const int row = cpsGrid_->rowCount();
+                cpsGrid_->insertRow(row);
+                cpsGrid_->setVerticalHeaderItem(
+                    row, new QTableWidgetItem(QString::fromStdString(zone.name)));
+                for (size_t c = 0; c < table.columnCount; ++c) {
+                    const QString name = QString::fromUtf8(table.columns[c].name).trimmed();
+                    QString value;
+                    bool assigned = false;
+                    if (name == "Channel Name") {
+                        value = QString::fromStdString(channel.name);
+                        assigned = true;
+                    } else if (name == "Receive Frequency" && rxSeen++ == 0) {
+                        value = QString::number(channel.rxMHz, 'f', 5);
+                        assigned = true;
+                    } else if (name == "Transmit Frequency" && txSeen++ == 0) {
+                        value = QString::number(channel.txMHz, 'f', 5);
+                        assigned = true;
+                    } else if (name == "Receive Squelch Type") {
+                        value = QString::number(channel.squelchRx);
+                        assigned = true;
+                    } else if (name == "Transmit Squelch Type") {
+                        value = QString::number(channel.squelchTx);
+                        assigned = true;
+                    } else if (name == "Personality Type") {
+                        value = channel.hasAstro ? "ASTRO" : "Conventional";
+                        assigned = true;
+                    }
+                    const auto& column = table.columns[c];
+                    if (!assigned && column.bindingCount > 0) {
+                        const auto& bind = column.bindings[0];
+                        const uint8_t* bytes = nullptr;
+                        size_t length = 0;
+                        const QString group = QString::fromUtf8(bind.group);
+                        if (group == "0x40aa9d8" && channel.personalitySize > 0) {
+                            bytes = channel.personality.data();
+                            length = size_t(channel.personalitySize);
+                        } else if (group == "0xf1a7ac0" || group == "0xf1a77f0") {
+                            bytes = channel.entry.data();
+                            length = channel.entry.size();
+                        }
+                        if (bytes && bind.bits > 0 &&
+                            size_t(bind.off) + size_t((bind.bits + 7) / 8) <= length) {
+                            const uint64_t raw = opendepot::ReadFieldBits(
+                                bytes, length, bind.off, bind.bits, bind.msb);
+                            if (name.contains("Frequency", Qt::CaseInsensitive) &&
+                                bind.bits == 32) {
+                                value = QString::number(
+                                    opendepot::WordToMHz(static_cast<uint32_t>(raw)), 'f', 5);
+                            } else {
+                                value = bind.bits > 32
+                                            ? QString("0x%1").arg(
+                                                  static_cast<qulonglong>(raw), 0, 16)
+                                            : QString::number(static_cast<qulonglong>(raw));
+                            }
+                        }
+                    }
+                    cpsGrid_->setItem(row, int(c), new QTableWidgetItem(value));
+                }
+                ++rows;
+            }
+        }
+        info += QString(" - %1 channel row(s)").arg(rows);
+    } else if (key == "trunking_message_alias" || key == "trunking_status_alias") {
+        const uint16_t tag = key == "trunking_message_alias" ? 0x005B : 0x0059;
+        const opendepot::AliasListModel* list = nullptr;
+        if (model_) {
+            for (const auto& candidate : model_->AliasLists()) {
+                if (candidate.tag == tag) {
+                    list = &candidate;
+                    break;
+                }
+            }
+        }
+        if (list) {
+            for (size_t i = 0; i < list->entries.size(); ++i) {
+                const int row = cpsGrid_->rowCount();
+                cpsGrid_->insertRow(row);
+                for (size_t c = 0; c < table.columnCount; ++c) {
+                    const QString name = QString::fromUtf8(table.columns[c].name).trimmed();
+                    QString value;
+                    if (name.contains("Number", Qt::CaseInsensitive)) value = QString::number(i + 1);
+                    if (name.contains("Text", Qt::CaseInsensitive))
+                        value = QString::fromStdString(list->entries[i]);
+                    cpsGrid_->setItem(row, int(c), new QTableWidgetItem(value));
+                }
+            }
+            info += QString(" - %1 alias row(s)").arg(list->entries.size());
+        }
+    } else if (key == "radio_configuration_features") {
+        if (have_) {
+            cpsGrid_->insertRow(0);
+            const QString flashcode = QString::fromStdString(opendepot::GetFlashcode(cp_));
+            for (size_t c = 0; c < table.columnCount; ++c)
+                cpsGrid_->setItem(0, int(c), new QTableWidgetItem(flashcode));
+            info += " - current FLASHcode";
+        }
+    } else if (key == "narrow_band_list") {
+        const auto* node = findNode(0x00290000u);
+        if (node) {
+            for (size_t base = 0; base + 8 <= node->payload.size(); base += 8) {
+                const int row = cpsGrid_->rowCount();
+                cpsGrid_->insertRow(row);
+                for (size_t c = 0; c < table.columnCount; ++c) {
+                    const auto& column = table.columns[c];
+                    if (column.bindingCount == 0) continue;
+                    const auto& bind = column.bindings[0];
+                    const uint64_t raw = opendepot::ReadFieldBits(
+                        node->payload.data(), node->payload.size(),
+                        static_cast<uint16_t>(base + bind.off), bind.bits, bind.msb);
+                    const QString name = QString::fromUtf8(column.name);
+                    cpsGrid_->setItem(
+                        row, int(c),
+                        new QTableWidgetItem(
+                            name.contains("Frequency", Qt::CaseInsensitive) && bind.bits == 32
+                                ? QString::number(opendepot::WordToMHz(uint32_t(raw)), 'f', 5)
+                                : QString::number(static_cast<qulonglong>(raw))));
+                }
+            }
+            info += QString(" - %1 range(s)").arg(cpsGrid_->rowCount());
+        }
+    } else if (key == "nat_list") {
+        const auto* node = findNode(0x00280000u);
+        if (node) {
+            const int row = cpsGrid_->rowCount();
+            cpsGrid_->insertRow(row);
+            for (size_t c = 0; c < table.columnCount; ++c) {
+                const auto& column = table.columns[c];
+                const QString name = QString::fromUtf8(column.name);
+                if (name == "Static NAT IP Address" && node->payload.size() >= 8) {
+                    cpsGrid_->setItem(
+                        row, int(c),
+                        new QTableWidgetItem(QString("%1.%2.%3.%4")
+                                                 .arg(node->payload[4])
+                                                 .arg(node->payload[5])
+                                                 .arg(node->payload[6])
+                                                 .arg(node->payload[7])));
+                } else if (column.bindingCount > 0) {
+                    const auto& bind = column.bindings[0];
+                    const uint64_t raw = opendepot::ReadFieldBits(
+                        node->payload.data(), node->payload.size(), bind.off, bind.bits, bind.msb);
+                    cpsGrid_->setItem(row, int(c),
+                                      new QTableWidgetItem(QString::number(
+                                          static_cast<qulonglong>(raw))));
+                }
+            }
+            info += " - 1 NAT row";
+        }
+    } else if (key == "trunking_site_alias" || key == "trunking_astro_site_alias") {
+        const auto* node = findNode(0x003F0000u);
+        if (node) {
+            const int row = cpsGrid_->rowCount();
+            cpsGrid_->insertRow(row);
+            for (size_t c = 0; c < table.columnCount; ++c) {
+                const auto& column = table.columns[c];
+                if (column.bindingCount == 0) continue;
+                const auto& bind = column.bindings[0];
+                const uint64_t raw = opendepot::ReadFieldBits(
+                    node->payload.data(), node->payload.size(), bind.off, bind.bits, bind.msb);
+                const QString name = QString::fromUtf8(column.name);
+                QString value;
+                if (name.contains("Text", Qt::CaseInsensitive) ||
+                    name.contains("Txt", Qt::CaseInsensitive)) {
+                    std::string text;
+                    for (size_t i = bind.off; i < node->payload.size() && node->payload[i];
+                         ++i)
+                        text.push_back(char(node->payload[i]));
+                    value = QString::fromStdString(text);
+                } else {
+                    value = QString::number(static_cast<qulonglong>(raw));
+                }
+                cpsGrid_->setItem(row, int(c), new QTableWidgetItem(value));
+            }
+            info += " - 1 alias row";
+        }
+    } else if (key == "trunking_call_list" || key == "astro_call_list" ||
+               key == "astro_talkgroup_list") {
+        QList<uint32_t> ids;
+        if (key == "trunking_call_list") ids = {0x0FD10000u, 0x0FD20000u, 0x0FD40000u};
+        if (key == "astro_call_list") ids = {0x0FAF0000u, 0x0FB00000u};
+        if (key == "astro_talkgroup_list") ids = {0x0FD70000u, 0x0FDA0000u};
+        for (uint32_t id : ids) {
+            const auto* node = findNode(id);
+            if (!node) continue;
+            const int row = cpsGrid_->rowCount();
+            cpsGrid_->insertRow(row);
+            for (size_t c = 0; c < table.columnCount; ++c) {
+                const auto& column = table.columns[c];
+                if (column.bindingCount == 0) continue;
+                const auto& bind = column.bindings[0];
+                if (size_t(bind.off) + size_t((bind.bits + 7) / 8) > node->payload.size())
+                    continue;
+                const uint64_t raw = opendepot::ReadFieldBits(
+                    node->payload.data(), node->payload.size(), bind.off, bind.bits, bind.msb);
+                cpsGrid_->setItem(
+                    row, int(c),
+                    new QTableWidgetItem(bind.bits > 32
+                                             ? QString("0x%1").arg(
+                                                   static_cast<qulonglong>(raw), 0, 16)
+                                             : QString::number(static_cast<qulonglong>(raw))));
+            }
+        }
+        info += QString(" - %1 row(s)").arg(cpsGrid_->rowCount());
+    } else if (key == "trunking_personality_talkgroups") {
+        for (const auto& node : model_->RecordNodes()) {
+            if (node.tag != 0x0FD5) continue;
+            const int row = cpsGrid_->rowCount();
+            cpsGrid_->insertRow(row);
+            for (size_t c = 0; c < table.columnCount; ++c) {
+                const auto& column = table.columns[c];
+                if (column.bindingCount == 0) continue;
+                const auto& bind = column.bindings[0];
+                if (size_t(bind.off) + size_t((bind.bits + 7) / 8) > node.payload.size())
+                    continue;
+                const uint64_t raw = opendepot::ReadFieldBits(
+                    node.payload.data(), node.payload.size(), bind.off, bind.bits, bind.msb);
+                const QString name = QString::fromUtf8(column.name);
+                cpsGrid_->setItem(
+                    row, int(c),
+                    new QTableWidgetItem(
+                        name.contains("Frequency", Qt::CaseInsensitive) && bind.bits == 32
+                            ? QString::number(opendepot::WordToMHz(uint32_t(raw)), 'f', 5)
+                            : QString::number(static_cast<qulonglong>(raw))));
+            }
+        }
+        info += QString(" - %1 talkgroup row(s)").arg(cpsGrid_->rowCount());
+    } else if (key == "secure_multikey") {
+        for (uint16_t tag : {uint16_t(0x0034), uint16_t(0x0057)}) {
+            const auto* node = FindRecord(cp_, tag, 0);
+            if (!node) continue;
+            const auto payload = RecordPayload(*node);
+            const int row = cpsGrid_->rowCount();
+            cpsGrid_->insertRow(row);
+            for (size_t c = 0; c < table.columnCount; ++c) {
+                const auto& column = table.columns[c];
+                if (column.bindingCount == 0) continue;
+                const auto& bind = column.bindings[0];
+                if (size_t(bind.off) + size_t((bind.bits + 7) / 8) > payload.size())
+                    continue;
+                const uint64_t raw = opendepot::ReadFieldBits(
+                    payload.data(), payload.size(), bind.off, bind.bits, bind.msb);
+                cpsGrid_->setItem(row, int(c),
+                                  new QTableWidgetItem(QString::number(
+                                      static_cast<qulonglong>(raw))));
+            }
+        }
+        info += QString(" - %1 secure row(s)").arg(cpsGrid_->rowCount());
+    } else if (model_ && table.coreSection) {
+        const QString section = QString::fromUtf8(table.coreSection);
+        int rows = 0;
+        for (const auto& node : model_->RecordNodes()) {
+            if (QString::fromStdString(node.section) != section) continue;
+            const auto payload = node.payload;
+            const int row = cpsGrid_->rowCount();
+            cpsGrid_->insertRow(row);
+            cpsGrid_->setVerticalHeaderItem(
+                row, new QTableWidgetItem(QString("0x%1/%2")
+                                              .arg(node.tag, 4, 16, QChar('0'))
+                                              .arg(node.inst)
+                                              .toUpper()));
+            for (size_t c = 0; c < table.columnCount; ++c) {
+                const auto& column = table.columns[c];
+                if (column.bindingCount == 0) continue;
+                const auto& bind = column.bindings[0];
+                if (bind.bits == 0) continue;
+                const size_t need = size_t(bind.off) + size_t((bind.bits + 7) / 8);
+                if (need > payload.size()) continue;
+                const uint64_t raw = opendepot::ReadFieldBits(
+                    payload.data(), payload.size(), bind.off, bind.bits, bind.msb);
+                const QString name = QString::fromUtf8(table.columns[c].name);
+                QString value;
+                if (name.contains("Frequency", Qt::CaseInsensitive) && bind.bits == 32) {
+                    value = QString::number(
+                        opendepot::WordToMHz(static_cast<uint32_t>(raw)), 'f', 5);
+                } else if (bind.bits > 32) {
+                    value = QString("0x%1").arg(static_cast<qulonglong>(raw), 0, 16);
+                } else {
+                    value = QString::number(static_cast<qulonglong>(raw));
+                }
+                cpsGrid_->setItem(row, int(c), new QTableWidgetItem(value));
+            }
+            ++rows;
+            if (rows >= 100) break;
+        }
+        info += QString(" - %1 raw record row(s)").arg(rows);
+    }
+    cpsTableInfo_->setText(info);
 }
 
 QWidget* MainWindow::buildSectionPage() {
@@ -918,6 +1560,14 @@ QWidget* MainWindow::buildSectionPage() {
                                     QAbstractItemView::EditKeyPressed);
     connect(sectionFields_, &QTableWidget::itemChanged, this, &MainWindow::applyFieldEdit);
     tabs->addTab(sectionFields_, "Fields (plain text)");
+
+    sectionNamed_ = new QTableWidget(0, 6);
+    sectionNamed_->setHorizontalHeaderLabels({"Field", "Group", "Off", "Bits", "MSB", "Value"});
+    sectionNamed_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+    sectionNamed_->verticalHeader()->setVisible(false);
+    sectionNamed_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    sectionNamed_->setShowGrid(false);
+    tabs->addTab(sectionNamed_, "Named fields");
 
     auto* hexWrap = new QWidget;
     auto* hexLay = new QVBoxLayout(hexWrap);
@@ -1181,6 +1831,7 @@ void MainWindow::updateDashboard() {
 
     fillZones(zones_, true);
     refreshRadioWidePage();
+    if (cpsTableList_) fillCpsTable(cpsTableList_->currentRow());
 }
 
 void MainWindow::fillZones(QTableWidget* table, bool groupRows) {
@@ -1358,6 +2009,64 @@ void MainWindow::refreshSectionRecord(int row) {
             sectionFields_->setItem(rowIdx, 5, ascItem);
         }
     }
+    if (sectionNamed_) {
+        sectionNamed_->setRowCount(0);
+        const QString recordTag =
+            QString("0x%1").arg(static_cast<int>(n->tag), 4, 16, QChar('0')).toUpper();
+        size_t fieldCount = 0;
+        const auto* fields = opendepot::FieldCatalog(fieldCount);
+        auto addField = [&](const opendepot::FieldDef& field, const QString& group) {
+            const int rowIdx = sectionNamed_->rowCount();
+            sectionNamed_->insertRow(rowIdx);
+            sectionNamed_->setItem(
+                rowIdx, 0,
+                new QTableWidgetItem(QString::fromUtf8(field.name ? field.name : "")));
+            sectionNamed_->setItem(rowIdx, 1, new QTableWidgetItem(group));
+            sectionNamed_->setItem(rowIdx, 2, new QTableWidgetItem(QString::number(field.off)));
+            sectionNamed_->setItem(rowIdx, 3, new QTableWidgetItem(QString::number(field.bits)));
+            sectionNamed_->setItem(rowIdx, 4, new QTableWidgetItem(QString::number(field.msb)));
+            QString valueText = "-";
+            if (field.bits > 0) {
+                const uint64_t value =
+                    opendepot::ReadFieldBits(n->payload.data(), n->payload.size(), field.off,
+                                             field.bits, field.msb);
+                valueText = field.bits > 32
+                                ? QString("0x%1").arg(static_cast<qulonglong>(value), 0, 16)
+                                : QString::number(static_cast<qulonglong>(value));
+            }
+            sectionNamed_->setItem(rowIdx, 5, new QTableWidgetItem(valueText));
+        };
+        for (size_t i = 0; i < fieldCount; ++i) {
+            const auto& field = fields[i];
+            if (!field.recordTag ||
+                QString::fromLatin1(field.recordTag).toUpper() != recordTag)
+                continue;
+            addField(field, QString::fromUtf8(field.group ? field.group : ""));
+        }
+        if (sectionNamed_->rowCount() == 0) {
+            QHash<QString, int> groupSize;
+            QHash<QString, QList<const opendepot::FieldDef*>> candidates;
+            for (size_t i = 0; i < fieldCount; ++i) {
+                const auto& field = fields[i];
+                const QString group = QString::fromUtf8(field.group ? field.group : "");
+                const int end = int(field.off) * 8 + int(field.bits);
+                if (end > groupSize.value(group)) groupSize[group] = end;
+                candidates[group].append(&field);
+            }
+            for (auto it = groupSize.cbegin(); it != groupSize.cend(); ++it) {
+                if ((it.value() + 7) / 8 != int(n->payload.size())) continue;
+                for (const auto* field : candidates.value(it.key()))
+                    addField(*field, it.key());
+            }
+        }
+        if (sectionNamed_->rowCount() == 0) {
+            sectionNamed_->insertRow(0);
+            sectionNamed_->setItem(
+                0, 0, new QTableWidgetItem("No named field group decoded for this record."));
+            sectionNamed_->setSpan(0, 0, 1, 6);
+        }
+    }
+
     const bool isTable = n->family == "name_table" && !n->names.empty();
     const bool isName = n->family == "name";
     sectionNames_->setVisible(isTable);

@@ -63,6 +63,27 @@ The WACN/Home System ID offsets were confirmed against the depot modification
 log (`Home WACN ID 00001 -> BEEF0`, `Home System ID 001 -> 123`) and the saved
 `Trunking-patched.cpg`; both round-trip through the GUI editor.
 
+## Runtime field registry
+
+`CcgIshField::GetFieldName` in the RDK returns the MFC `CString` at field
+object offset `+4`; `CcgIshField` loads that string from a Depot RT_STRING
+resource. The resource ID is `field_id + 16` (verified for all five known Radio
+Wide fields and thousands of table fields). The registry now names **2,529 of
+2,949** runtime layout fields; the unnamed 420 are structural/container fields
+or fields without a Depot string resource. Every field still retains its group,
+payload offset, bit count, MSB, optional block, and table bindings.
+
+Table columns are joined to field IDs by normalized CPS name:
+**124 of 140 columns bind**. The bound schema is
+[codeplug_field_schema.json](codeplug_field_schema.json); the column-level join
+report is [CODEPLUG_TABLE_BINDINGS.md](CODEPLUG_TABLE_BINDINGS.md). Missing
+columns are primarily derived/display-only (PL frequency/code, Test channel
+frequency, Secure slot/index, `Current` feature text) rather than stored fields.
+
+The extraction tools are `OpenDepotCore/tools/extract_pe_strings.py`,
+`bind_table_fields.py`, and `decode_field_schema.py`; the registry summary is
+[CODEPLUG_FIELD_REGISTRY.md](CODEPLUG_FIELD_REGISTRY.md).
+
 ## Section map
 
 | CPS section | Records | Confidence |
@@ -96,6 +117,24 @@ log (`Home WACN ID 00001 -> BEEF0`, `Home System ID 001 -> 123`) and the saved
 | Expert / Codeplug Directory | `0x0047` | verified |
 | Expert / Passcode | `0x0051` | verified |
 | Expert / Other Records | any tag not otherwise mapped | unknown |
+
+## CPS table definitions
+
+The portable Depot's 18 Rui/CgIsh `.tbl` files define the CPS table columns:
+140 columns total (124 text, 16 checkbox), including the 47-column Zone Channel
+Assignment table and 32-column Trunking Personality talkgroup table. The
+generated schema is [codeplug_table_schema.json](codeplug_table_schema.json);
+the readable version is [CODEPLUG_TABLE_SCHEMA.md](CODEPLUG_TABLE_SCHEMA.md).
+
+These definitions provide column labels, order, display widths, and
+text/checkbox control types. They do **not** contain codeplug bit offsets; the
+block/core mappings are inferred. Duplicate labels are distinct columns (for
+example, `Receive Frequency` appears twice in Zone Channel Assignment). The
+generated schema also records candidate core record tags and, for each table
+block, the number of runtime layout rows/groups found in
+`codeplug_field_schema.json`; 5 of 18 tables currently have layout rows. Use the
+schema for UI parity and as the join target for field decoding, not as a raw
+record decoder.
 
 ## Zones and channel names
 
@@ -174,17 +213,25 @@ The Qt app builds its tree directly from `CodeplugModel::Sections()`:
 
 - **Radio Wide** opens a CPS-style tab set with the portable-depot General
   layout. Maximum Channels is mapped to `0x000A` offset 8 (u16 little-endian);
-  the other controls are visible but disabled until their offsets are verified,
-  and a button opens the raw Radio Wide records. See
+  the other controls are visible but disabled until their option-value semantics
+  are verified, and a button opens the raw Radio Wide records. See
   [RADIO_WIDE_MAP.md](RADIO_WIDE_MAP.md).
 - **Zone Channel Assignment** opens the grouped channel table and an editor for
   zone name, channel name, RX/TX MHz, and RX/TX squelch.
 - **Radio Information** keeps the dashboard.
+- **CPS Tables** shows the original 18 table definitions. Zone Channel
+  Assignment uses the decoded channel model (47 columns), alias tables use the
+  decoded alias lists, and radio configuration features show the current
+  FLASHcode. The remaining tables still need their page/entry row bindings.
+- **Field Catalog** shows all 18 CPS tables, their columns and the bound runtime
+  field IDs/names/groups/offsets from `FieldCatalog()`; 124/140 columns are
+  bound.
 - Every other section opens the record explorer: a table of the section's
   records (ID, tag, instance, size, family/name), decoded references and
   strings, an editable name table (for `name_table` and single-`name` records),
   a **Fields (plain text)** tab (offset, hex, U8, U16, U32, ASCII; double-click
-  U8 to write one byte), and a **Hex** payload editor (`SetRecordPayload`).
+  U8 to write one byte), a **Named fields** tab for record groups with a known
+  tag binding, and a **Hex** payload editor (`SetRecordPayload`).
 - **Export Plain Text** writes every section, record, name, reference and byte
   to a text file.
 - **File > Save** writes the edited codeplug in place; **Save As** writes a copy.
@@ -196,13 +243,14 @@ channels, and every byte can be edited.
 
 ## Open questions
 
-- Semantics of channel entry bytes `4..11`, `28..33`, `34`.
-- `0x0FCD` field layout (likely PL/DPL/ASTRO data; zero in the current sample).
-- Radio Wide (`0x000A` etc.), personality internals, MDC/Quik-Call/DTMF/
-  Singletone and scan-list row encoding.
+- Enum/option value semantics for named radio-wide, personality, and trunking
+  fields (the field IDs, names, offsets, and bit widths are now known).
+- The 420 unnamed structural/container fields.
+- Channel entry bytes `4..11`, `28..33`, `34` and the `0x0FCD` layout.
+- MDC/Quik-Call/DTMF/Singletone and scan-list row encoding.
 - Adding/removing channels and zones: the record set is fixed by the ISH
   directory, so this needs record allocation and directory updates, not just
   field edits.
 
-Decoding these needs varied real codeplugs (non-default PL, bandwidth, power,
-signaling) or static analysis of `PatPortDepot.exe` / `fhAdk10c.dll`.
+Value semantics still need varied real codeplugs (non-default PL, bandwidth,
+power, signaling) or table-level runtime probes.
