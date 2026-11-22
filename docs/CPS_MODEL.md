@@ -51,6 +51,18 @@ Families are detected structurally:
 - `identity`: `0x1004`, `0x1005`, `0x1006`.
 - `blob`: everything else; bytes are preserved and exposed.
 
+## Verified fields
+
+| Field | Record | Payload offset | Type |
+|---|---|---|---|
+| Maximum Channels (Talkgroups) | `0x000A` | `8` | u16 little-endian |
+| Home WACN | `0x0FE6` | `0x1A` | 24-bit big-endian |
+| Home System ID | `0x0FE6` | `0x1D` | u16 big-endian |
+
+The WACN/Home System ID offsets were confirmed against the depot modification
+log (`Home WACN ID 00001 -> BEEF0`, `Home System ID 001 -> 123`) and the saved
+`Trunking-patched.cpg`; both round-trip through the GUI editor.
+
 ## Section map
 
 | CPS section | Records | Confidence |

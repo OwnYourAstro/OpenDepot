@@ -63,6 +63,17 @@ group. FLASHcode example: 500008-000488-2 (Q806, H14, H38, Q173).
 Records removed vs conventional: 0x0052, 0x0053, 0x0fb4/0x0fb5, 0x0fbe,
 0x0fcb/0x0fcc/0x0fcd* (conventional personalities/channels replaced by trunking ones).
 
+## Trunking System / General (0x0FE6)
+
+Verified against the depot modification log and `Trunking-patched.cpg`:
+
+| Offset | Field | Encoding |
+|---|---|---|
+| `0x1A..0x1C` | Home WACN | 24-bit big-endian (`BEEF0`) |
+| `0x1D..0x1E` | Home System ID | u16 big-endian (`123`) |
+
+The remaining bytes of `0x0FE6` are still unlabelled; use the raw record view.
+
 ## Generation approach
 - Build header + identity (0x1004/0x1005/0x1006) from the model/serial/FLASHcode.
 - Build config/directory (0x0047 etc.) from defaults.

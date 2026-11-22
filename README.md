@@ -54,6 +54,8 @@ Working today:
   Windows CryptoAPI output byte for byte.
 - Read/edit identity (serial/model), FLASHcode, zone and channel names, and
   frequencies; read/set/clear the codeplug passcode record.
+- Decode/edit Radio Wide Maximum Channels and Trunking System Home WACN /
+  Home System ID.
 - Read the FLASHcode option map and rebuild a valid FLASHcode from selected
   packages/add-ons (option tables for 13 ASTRO 25 platforms).
 - **Native radio read** (no vendor DLL): complete tag-based read of the tested

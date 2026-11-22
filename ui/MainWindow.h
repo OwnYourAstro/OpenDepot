@@ -17,6 +17,7 @@
 class QAction;
 class QComboBox;
 class QGridLayout;
+class QGroupBox;
 class QLabel;
 class QLineEdit;
 class QPlainTextEdit;
@@ -141,6 +142,9 @@ private:
     int sectionIndex_ = -1;
     QLabel* sectionTitle_ = nullptr;
     QLabel* sectionSubtitle_ = nullptr;
+    QGroupBox* trunkGroup_ = nullptr;
+    QLineEdit* trunkWacn_ = nullptr;
+    QLineEdit* trunkHomeId_ = nullptr;
     QTableWidget* sectionRecords_ = nullptr;
     QPlainTextEdit* sectionDetail_ = nullptr;
     QPlainTextEdit* sectionHex_ = nullptr;

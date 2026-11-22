@@ -830,6 +830,46 @@ QWidget* MainWindow::buildSectionPage() {
     sectionSubtitle_->setWordWrap(true);
     lay->addWidget(sectionSubtitle_);
 
+    trunkGroup_ = new QGroupBox("Trunking System");
+    auto* tl = new QGridLayout(trunkGroup_);
+    tl->addWidget(new QLabel("Home WACN:"), 0, 0);
+    trunkWacn_ = new QLineEdit;
+    trunkWacn_->setMaximumWidth(150);
+    trunkWacn_->setPlaceholderText("hex, e.g. BEEF0");
+    tl->addWidget(trunkWacn_, 0, 1);
+    tl->addWidget(new QLabel("Home System ID:"), 0, 2);
+    trunkHomeId_ = new QLineEdit;
+    trunkHomeId_->setMaximumWidth(110);
+    trunkHomeId_->setPlaceholderText("hex, e.g. 123");
+    tl->addWidget(trunkHomeId_, 0, 3);
+    auto* trunkApply = new QPushButton("Apply");
+    trunkApply->setObjectName("accent");
+    connect(trunkApply, &QPushButton::clicked, this, [this] {
+        if (!model_ || !model_->TrunkingSystem().present) return;
+        bool ok = false;
+        const uint wacn = trunkWacn_->text().trimmed().toUInt(&ok, 16);
+        if (!ok || wacn > 0xFFFFFF) {
+            QMessageBox::warning(this, "Trunking System", "Home WACN must be 24-bit hex.");
+            return;
+        }
+        const uint home = trunkHomeId_->text().trimmed().toUInt(&ok, 16);
+        if (!ok || home > 0xFFFF) {
+            QMessageBox::warning(this, "Trunking System", "Home System ID must be 16-bit hex.");
+            return;
+        }
+        if (!model_->SetWacn(wacn) || !model_->SetHomeSystemId(static_cast<uint16_t>(home))) {
+            QMessageBox::warning(this, "Trunking System", "The record could not be updated.");
+            return;
+        }
+        refreshAfterEdit();
+        showSection(sectionIndex_);
+        statusBar()->showMessage("Trunking System updated in memory - File > Save.", 8000);
+    });
+    tl->addWidget(trunkApply, 0, 4);
+    tl->setColumnStretch(5, 1);
+    trunkGroup_->setVisible(false);
+    lay->addWidget(trunkGroup_);
+
     sectionRecords_ = new QTableWidget(0, 5);
     sectionRecords_->setHorizontalHeaderLabels(
         {"Record ID", "Tag", "Inst", "Bytes", "Family / Name"});
@@ -1224,6 +1264,20 @@ void MainWindow::showSection(int index) {
                                   .arg(QString::fromStdString(s.group))
                                   .arg(static_cast<int>(s.records.size()))
                                   .arg(QString::fromUtf8(opendepot::ConfidenceName(s.confidence))));
+    if (trunkGroup_) {
+        const bool show = s.id == "trunking_system" && model_->TrunkingSystem().present;
+        trunkGroup_->setVisible(show);
+        if (show) {
+            trunkWacn_->setText(
+                QString("%1")
+                    .arg(static_cast<qulonglong>(model_->TrunkingSystem().wacn), 5, 16, QChar('0'))
+                    .toUpper());
+            trunkHomeId_->setText(
+                QString("%1")
+                    .arg(static_cast<int>(model_->TrunkingSystem().homeSystemId), 4, 16, QChar('0'))
+                    .toUpper());
+        }
+    }
     refreshSectionList();
 }
 
