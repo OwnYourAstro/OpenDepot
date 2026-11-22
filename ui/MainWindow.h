@@ -57,6 +57,7 @@ public:
 
 private slots:
     void openCodeplug();
+    void createCodeplug();
     void saveCodeplug();
     void saveCodeplugAs();
     void generateReport();
