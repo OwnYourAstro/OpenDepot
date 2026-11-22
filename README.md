@@ -20,13 +20,13 @@
 
 # OpenDepot
 
-Clean-room C++ reimplementation of the ASTRO 25 codeplug layer, with a Dear ImGui
-GUI. The reusable core and CLI now live in the separate
-[`OpenDepotCore`](../OpenDepotCore) repository; this repository holds the
-desktop GUI (being replaced by Qt 6) plus the reverse-engineering notes and
-tooling. Together they read, edit, create and write Motorola ASTRO 25 `.cpg`
-codeplugs, and read/write a connected radio over its serial/PPP programming
-link — without needing the Depot for the read or the codeplug write.
+Clean-room C++ reimplementation of the ASTRO 25 codeplug layer, with a Qt 6
+Widgets GUI. The reusable core and the clean-room serial/PPP/RCMP transport live
+in the separate [`OpenDepotCore`](../OpenDepotCore) repository; this repository
+holds the desktop GUI plus the reverse-engineering notes and tooling. Together
+they read, edit, create and write Motorola ASTRO 25 `.cpg` codeplugs, and
+read/write a connected radio over its serial/PPP programming link — without
+needing the Depot for the read or the codeplug write.
 
 ## Current state
 
@@ -132,31 +132,24 @@ records but have not been validated.
 
 ## Build
 
-Requires Visual Studio 2022 (C++ workload). The `.NET Framework 4` / `csc.exe`
-helper (`tools/radio_helper.cs` → `radio_helper.exe`) is only needed for the
-legacy `--erase-radio` / `--replace-radio` paths; native read and raw write do
-not use it.
+Requires Qt 6.8+ (MSVC 2022 x64) and Visual Studio 2022. The core is consumed
+from the sibling `OpenDepotCore` checkout (override with
+`-DOPENDEPOT_CORE_DIR=<path>`).
 
 ```powershell
 $cm = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
-& $cm -S . -B build\vs -G "Visual Studio 17 2022" -A x64
-& $cm --build build\vs --config Release
-```
-
-Optional helper (erase/replace only):
-
-```powershell
-& "C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe" /nologo /platform:x86 `
-  /r:"C:\Windows\SysWOW64\Interop.NEXTGENLib.dll" `
-  /out:tools\radio_helper.exe tools\radio_helper.cs
-Copy-Item tools\radio_helper.exe,tools\Interop.NEXTGENLib.dll build\vs\Release\ -Force
+& $cm -S . -B build\qt -G "Visual Studio 17 2022" -A x64 `
+  -DCMAKE_PREFIX_PATH=C:/Qt/6.8.3/msvc2022_64
+& $cm --build build\qt --config Release
 ```
 
 Outputs:
 
-- `build\vs\Release\OpenDepot.exe` — GUI
-- `build\vs\Release\opendepot-cli.exe` — console
+- `build\qt\Release\OpenDepot.exe` — Qt 6 GUI.
+- `build\qt\opendepotcore\Release\opendepot-cli.exe` — console (built by the core subproject).
 
+The legacy `radio_helper` and `radio_tcp.py` paths remain in `tools/` for
+recovery and reference; the Qt GUI uses the core's native transport directly.
 ## CLI
 
 ```text
@@ -213,15 +206,15 @@ opendepot-cli --backup-radio <port> <outdir>
 
 ## GUI
 
-- **File** → Open `.cpg`, Save As, Exit.
-- **Tools** → Create Codeplug…, Re-verify.
-- **Radio** → port dropdown (enumerated live), Read from Radio… (works with no
-  codeplug open), Write to Radio… (validates, shows the identity, confirms),
-  Cancel.
+Qt 6 Widgets with a custom dark theme. Pages:
 
-The Create dialog takes Band / Radio / Type / Model / Serial / FLASHcode and
-optional packages/add-ons. When a codeplug is open, it prefills from the read
-(serial, model, FLASHcode) and derives band from the first channel frequency.
+- **Dashboard** — identity, FLASHcode, record count, and a zones/channels table.
+- **Service Report**, **Doctor**, **Diff**.
+- **Radio** — COM port entry, native Read/Write with a busy dialog and a log.
+
+The Radio page uses `opendepot::RadioSession` (in-tree PPP/RCMP), not the vendor
+helper or Python. Writes are checked by the completeness guard and require
+explicit confirmation.
 
 ## Codeplug passcode
 
@@ -308,21 +301,13 @@ Read uses the native reader; write uses the raw writer. `NextGen10.dll` /
 
 ## Layout
 
-- `src/adk.*` — container, ADK cipher, RC4 (CryptoAPI), CRC, codeplug model
-- `src/model_db.*` — generated built-in per-model schemas
-- `src/flashcode_db.cpp` — generated per-platform FLASHcode option tables
-- `src/main_gui.cpp` — Dear ImGui + Win32 + Direct3D 11 UI
-- `src/main_cli.cpp` — console commands
-- `tools/radio_tcp.py` — native reader and raw writer (PPP/RCMP, auth)
-- `tools/gen_model_db.py` — generates `src/model_db.cpp` from reference codeplugs
-- `tools/flashcode_options.json` / `tools/gen_flashcode_db.py` — FLASHcode tables
+- `ui/` — Qt 6 Widgets GUI (`MainWindow`, `theme.qss`, resources)
+- `tools/radio_tcp.py` — legacy native reader/writer (recovery/reference)
 - `tools/radio_helper.cs` — legacy 32-bit vendor-driver helper (erase/replace)
-- `docs/ADK_FORMAT.md` — container/crypto/CRC notes
-- `docs/WRITE_PROTOCOL.md`, `docs/RCMP_INTERNAL.md` — radio protocol notes
-- `docs/FEATURES.md`, `docs/CREATE_CODEPLUG.md` — FLASHcode/creation notes
-- `docs/SAFETY.md` — FAIL 01/92 analysis and write guardrails
-- `third_party/imgui` — vendored Dear ImGui
-
+- `tools/gen_model_db.py`, `tools/gen_flashcode_db.py` — data generators
+- `docs/` — container, protocol, safety, and feature notes
+- The codeplug container, crypto, model/FLASHcode data, and native radio
+  transport live in `../OpenDepotCore`.
 ## Disclaimer and license
 
 - **No affiliation.** OpenDepot is an independent project. It is not affiliated

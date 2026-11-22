@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OwnYourAstro — Your Radio. Your Codeplug. Your Control.</title>
+    <meta name="description" content="An open, cross-platform programming ecosystem designed to give radio owners control over their own equipment. Clean-room reimplementation of the CPS programming engine.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Tailwind CSS Setup -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        astro: {
+                            base: '#050505',
+                            surface: '#111111',
+                            surface2: '#1a1a1a',
+                            border: '#2a2a2a',
+                            borderHover: '#404040',
+                            cyan: '#00f0ff',
+                            cyanHover: '#00c8d4',
+                            cyanDim: 'rgba(0, 240, 255, 0.1)',
+                            amber: '#ffb000',
+                            green: '#00ff66',
+                            textMain: '#e0e0e0',
+                            textMuted: '#888888'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    },
+                    backgroundImage: {
+                        'grid-pattern': "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h40v40H0V0zm1 1h38v38H1V1z' fill='%23ffffff' fill-opacity='0.02' fill-rule='evenodd'/%3E%3C/svg%3E\")",
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Styles for Technical Accents */
+        body {
+            background-color: #050505;
+            color: #e0e0e0;
+        }
+        
+        .tech-border {
+            border: 1px solid #2a2a2a;
+            position: relative;
+        }
+
+        .tech-border::before, .tech-border::after,
+        .tech-border .corner-bl, .tech-border .corner-br {
+            content: '';
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background-color: #00f0ff;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .tech-border:hover::before, .tech-border:hover::after,
+        .tech-border:hover .corner-bl, .tech-border:hover .corner-br {
+            opacity: 1;
+        }
+
+        .tech-border::before { top: -1px; left: -1px; }
+        .tech-border::after { top: -1px; right: -1px; }
+        .corner-bl { bottom: -1px; left: -1px; }
+        .corner-br { bottom: -1px; right: -1px; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #050505;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2a2a2a;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #404040;
+        }
+
+        /* Mock UI specific */
+        .mock-tree-line {
+            position: absolute;
+            left: 11px;
+            top: 24px;
+            bottom: -10px;
+            width: 1px;
+            background-color: #333;
+        }
+        
+        /* Architecture Diagram Lines */
+        .arch-connector {
+            width: 2px;
+            background: #2a2a2a;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body class="font-sans antialiased selection:bg-astro-cyan selection:text-astro-base flex flex-col min-h-screen relative">
+    
+    <!-- Background Pattern -->
+    <div class="fixed inset-0 bg-grid-pattern pointer-events-none z-[-1]"></div>
+    
+    <!-- subtle top glow -->
+    <div class="fixed top-0 left-1/2 -translate-x-1/2 w-3/4 h-[500px] bg-astro-cyan/5 blur-[120px] rounded-full pointer-events-none z-[-1]"></div>
+
+    <!-- Navigation -->
+    <nav class="border-b border-astro-border bg-astro-base/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <i class="ph ph-radio font-bold text-astro-cyan text-2xl"></i>
+                <span class="font-mono font-bold text-lg tracking-tight">OwnYour<span class="text-astro-cyan">Astro</span></span>
+            </div>
+            <div class="flex items-center gap-6 text-sm font-mono text-astro-textMuted hidden md:flex">
+                <a href="#problem" class="hover:text-astro-textMain transition-colors">The Problem</a>
+                <a href="#architecture" class="hover:text-astro-textMain transition-colors">Architecture</a>
+                <a href="#roadmap" class="hover:text-astro-textMain transition-colors">Roadmap</a>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="hidden sm:flex items-center gap-2 px-2 py-1 rounded border border-astro-amber/30 bg-astro-amber/5 text-astro-amber text-xs font-mono">
+                    <span class="relative flex h-2 w-2">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-astro-amber opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-2 w-2 bg-astro-amber"></span>
+                    </span>
+                    IN DEVELOPMENT
+                </div>
+                <a href="https://github.com/OwnYourAstro" target="_blank" rel="noopener" class="text-astro-textMuted hover:text-astro-textMain transition-colors" aria-label="GitHub Repository (Placeholder)">
+                    <i class="ph ph-github-logo text-2xl"></i>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-grow">
+        
+        <!-- Hero Section -->
+        <section class="py-20 md:py-32 px-6 max-w-7xl mx-auto relative">
+            <div class="grid lg:grid-cols-2 gap-16 items-center">
+                <!-- Text Content -->
+                <div class="max-w-2xl">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-astro-border bg-astro-surface text-astro-textMuted text-xs font-mono mb-8">
+                        <i class="ph ph-terminal text-astro-cyan"></i>
+                        <span>Project Status: Research & Development</span>
+                    </div>
+                    
+                    <h1 class="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-white leading-[1.1] mb-6">
+                        Your Radio.<br>
+                        Your Codeplug.<br>
+                        <span class="text-transparent bg-clip-text bg-gradient-to-r from-astro-cyan to-astro-green">Your Control.</span>
+                    </h1>
+                    
+                    <p class="text-lg text-astro-textMuted mb-10 leading-relaxed">
+                        Radio programming shouldn't be locked behind aging proprietary software and platform restrictions. 
+                        OwnYourAstro is an independent project building an open, cross-platform programming ecosystem to give radio owners permanent control over their equipment.
+                    </p>
+                    
+                    <div class="flex flex-col sm:flex-row gap-4 font-mono text-sm">
+                        <a href="#roadmap" class="inline-flex justify-center items-center gap-2 bg-astro-cyan text-astro-base px-6 py-3 font-semibold hover:bg-astro-cyanHover transition-colors focus:ring-2 focus:ring-astro-cyan focus:ring-offset-2 focus:ring-offset-astro-base">
+                            <i class="ph ph-binoculars"></i>
+                            Follow Development
+                        </a>
+                        <a href="#architecture" class="inline-flex justify-center items-center gap-2 border border-astro-border bg-astro-surface hover:bg-astro-border px-6 py-3 text-astro-textMain transition-colors">
+                            <i class="ph ph-cpu"></i>
+                            Explore the Architecture
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Mock UI -->
+                <div class="relative w-full aspect-[4/3] rounded-lg overflow-hidden border border-astro-border bg-astro-base shadow-2xl shadow-astro-cyan/5">
+                    <!-- Conceptual Preview Badge -->
+                    <div class="absolute bottom-3 right-3 px-2 py-1 bg-astro-surface2/90 border border-astro-borderHover text-[10px] font-mono text-astro-textMuted rounded shadow backdrop-blur-sm z-20 flex items-center gap-1">
+                        <i class="ph-fill ph-warning-circle text-astro-amber"></i> Conceptual Interface Preview
+                    </div>
+
+                    <!-- Window Header -->
+                    <div class="h-8 bg-astro-surface border-b border-astro-border flex items-center px-4 justify-between select-none">
+                        <div class="flex gap-2">
+                            <div class="w-3 h-3 rounded-full bg-[#ff5f56]"></div>
+                            <div class="w-3 h-3 rounded-full bg-[#ffbd2e]"></div>
+                            <div class="w-3 h-3 rounded-full bg-[#27c93f]"></div>
+                        </div>
+                        <div class="font-mono text-[10px] text-astro-textMuted">OwnYourAstro - Shared CPS Core</div>
+                        <div class="w-12"></div> <!-- Spacer for center alignment -->
+                    </div>
+                    
+                    <!-- App Content -->
+                    <div class="flex h-[calc(100%-2rem)] font-mono text-xs opacity-90">
+                        <!-- Sidebar -->
+                        <div class="w-1/3 border-r border-astro-border bg-astro-surface2 p-3 overflow-y-auto">
+                            <div class="text-astro-textMuted mb-2 uppercase text-[10px] tracking-wider">Configuration Map</div>
+                            <div class="relative pl-4 space-y-2">
+                                <div class="mock-tree-line"></div>
+                                <div class="flex items-center gap-2 text-astro-textMain relative z-10 bg-astro-surface2">
+                                    <i class="ph-fill ph-caret-down text-[10px]"></i>
+                                    <i class="ph ph-hard-drives text-astro-amber"></i>
+                                    XTS5000_Backup.cp
+                                </div>
+                                <div class="pl-4 space-y-2 relative z-10">
+                                    <div class="flex items-center gap-2 text-astro-textMuted hover:text-astro-textMain cursor-default">
+                                        <i class="ph-fill ph-caret-right text-[10px]"></i>
+                                        <i class="ph ph-gear"></i> Radio Wide
+                                    </div>
+                                    <div class="flex items-center gap-2 text-astro-textMuted hover:text-astro-textMain cursor-default">
+                                        <i class="ph-fill ph-caret-down text-[10px]"></i>
+                                        <i class="ph ph-list-dashes"></i> Conventional
+                                    </div>
+                                    <div class="pl-4 space-y-1">
+                                        <div class="flex items-center gap-2 text-astro-cyan bg-astro-cyanDim px-1 py-0.5 rounded cursor-default">
+                                            <i class="ph ph-file"></i> Personality 1
+                                        </div>
+                                        <div class="flex items-center gap-2 text-astro-textMuted cursor-default px-1">
+                                            <i class="ph ph-file"></i> Personality 2
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2 text-astro-textMuted cursor-default">
+                                        <i class="ph-fill ph-caret-right text-[10px]"></i>
+                                        <i class="ph ph-lock-key"></i> Secure
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Main Editor Area -->
+                        <div class="w-2/3 bg-astro-base p-4 flex flex-col">
+                            <div class="flex justify-between items-end mb-4 border-b border-astro-border pb-2">
+                                <div class="text-sm font-semibold text-astro-textMain">Conventional Personality 1</div>
+                                <div class="text-[10px] text-astro-green"><i class="ph ph-check-circle inline"></i> Model Validated</div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4 flex-grow">
+                                <div class="space-y-1">
+                                    <label class="text-[10px] text-astro-textMuted">Rx Frequency (MHz)</label>
+                                    <div class="bg-astro-surface border border-astro-border px-2 py-1 text-astro-textMain font-mono">146.52000</div>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] text-astro-textMuted">Tx Frequency (MHz)</label>
+                                    <div class="bg-astro-surface border border-astro-border px-2 py-1 text-astro-textMain font-mono">146.52000</div>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] text-astro-textMuted">Rx Tone / NAC</label>
+                                    <div class="bg-astro-surface border border-astro-border px-2 py-1 text-astro-textMuted font-mono">CSQ</div>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] text-astro-textMuted">Tx Tone / NAC</label>
+                                    <div class="bg-astro-surface border border-astro-border px-2 py-1 text-astro-textMuted font-mono">CSQ</div>
+                                </div>
+                                <div class="space-y-1 col-span-2 mt-2">
+                                    <label class="text-[10px] text-astro-textMuted">Modulation</label>
+                                    <div class="flex gap-2">
+                                        <div class="bg-astro-cyanDim border border-astro-cyan text-astro-cyan px-2 py-1 flex-1 text-center cursor-default">Analog</div>
+                                        <div class="bg-astro-surface border border-astro-border text-astro-textMuted px-2 py-1 flex-1 text-center cursor-default">ASTRO</div>
+                                        <div class="bg-astro-surface border border-astro-border text-astro-textMuted px-2 py-1 flex-1 text-center cursor-default">Mixed</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Hex Inspector Simulation -->
+                            <div class="mt-4 pt-4 border-t border-astro-border">
+                                <div class="text-[10px] text-astro-textMuted mb-2 flex justify-between">
+                                    <span>Raw Block Inspector (Offset: 0x01A4)</span>
+                                    <span class="text-astro-cyan font-mono cursor-pointer">Read-Only</span>
+                                </div>
+                                <div class="bg-astro-surface2 border border-astro-border p-2 font-mono text-[10px] text-astro-textMuted overflow-hidden break-all leading-tight opacity-75">
+                                    <span class="text-astro-borderHover mr-2">01A0</span> 00 00 00 00 <span class="text-astro-textMain">E2 C4</span> 00 00 <span class="text-astro-cyan">01 02</span> 00 00 00 00 00 00<br>
+                                    <span class="text-astro-borderHover mr-2">01B0</span> 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <hr class="border-astro-border">
+
+        <!-- The Problem -->
+        <section id="problem" class="py-20 px-6 max-w-7xl mx-auto">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">You Own the Radio.<br>Why Don't You Own the Software?</h2>
+                <p class="text-astro-textMuted text-lg">
+                    Radio hardware can remain useful for decades, but the software required to configure it shouldn't become the bottleneck. Long-term access to your radio shouldn't depend on proprietary decisions or obsolete operating systems.
+                </p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- Card 1 -->
+                <div class="tech-border bg-astro-surface p-8">
+                    <div class="corner-bl"></div><div class="corner-br"></div>
+                    <div class="w-12 h-12 bg-astro-base border border-astro-border rounded flex items-center justify-center mb-6 text-astro-amber">
+                        <i class="ph ph-hourglass-high text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3 font-sans">Aging Environments</h3>
+                    <p class="text-astro-textMuted text-sm leading-relaxed">
+                        Programming environments are often permanently tied to obsolete operating systems, requiring dedicated legacy laptops or complex, unstable virtual machines just to change a frequency.
+                    </p>
+                </div>
+                <!-- Card 2 -->
+                <div class="tech-border bg-astro-surface p-8">
+                    <div class="corner-bl"></div><div class="corner-br"></div>
+                    <div class="w-12 h-12 bg-astro-base border border-astro-border rounded flex items-center justify-center mb-6 text-astro-cyan">
+                        <i class="ph ph-lock-key text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3 font-sans">Platform Restrictions</h3>
+                    <p class="text-astro-textMuted text-sm leading-relaxed">
+                        Proprietary tools enforce rigid workflows and limit hardware choice. If you prefer Linux, macOS, or need to program a radio in the field via Android, you are historically locked out.
+                    </p>
+                </div>
+                <!-- Card 3 -->
+                <div class="tech-border bg-astro-surface p-8">
+                    <div class="corner-bl"></div><div class="corner-br"></div>
+                    <div class="w-12 h-12 bg-astro-base border border-astro-border rounded flex items-center justify-center mb-6 text-astro-textMuted">
+                        <i class="ph ph-puzzle-piece text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3 font-sans">Fragmented Tools</h3>
+                    <p class="text-astro-textMuted text-sm leading-relaxed">
+                        Different radio families require completely isolated software packages with inconsistent interfaces, making fleet management, codeplug preservation, and learning unnecessarily difficult.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <hr class="border-astro-border">
+
+        <!-- Architecture Section -->
+        <section id="architecture" class="py-20 px-6 max-w-7xl mx-auto">
+            <div class="mb-16 text-center">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">One Engine. Every Platform.<br><span class="text-astro-cyan font-normal text-2xl md:text-3xl">No Artificial Boundaries.</span></h2>
+                <p class="text-astro-textMuted text-lg max-w-2xl mx-auto">
+                    OwnYourAstro is not just another interface. It is architected around a shared, platform-independent programming core. The frontends do not duplicate logic; they are simply different lenses into the same engine.
+                </p>
+            </div>
+
+            <!-- Enhanced Architecture Visualization -->
+            <div class="max-w-4xl mx-auto bg-astro-surface border border-astro-border p-8 md:p-12 rounded-lg relative font-mono text-sm overflow-hidden">
+                
+                <div class="flex flex-col items-center relative z-10 w-full max-w-3xl mx-auto">
+                    
+                    <!-- Layer 1: UIs -->
+                    <div class="w-full text-center mb-2 text-[10px] text-astro-textMuted uppercase tracking-widest font-bold">Presentation Layer</div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
+                        <div class="bg-astro-base border border-astro-border p-4 shadow-lg hover:border-astro-textMuted transition-colors text-center">
+                            <i class="ph ph-browser text-2xl text-astro-cyan mb-2"></i>
+                            <div class="font-bold text-white">WEB APP</div>
+                            <div class="text-[10px] text-astro-textMuted mt-1">Browser-based editing</div>
+                        </div>
+                        <div class="bg-astro-base border border-astro-border p-4 shadow-lg hover:border-astro-textMuted transition-colors text-center">
+                            <i class="ph ph-desktop text-2xl text-astro-cyan mb-2"></i>
+                            <div class="font-bold text-white">DESKTOP APP</div>
+                            <div class="text-[10px] text-astro-textMuted mt-1">Windows / Linux / macOS</div>
+                        </div>
+                        <div class="bg-astro-base border border-astro-border p-4 shadow-lg hover:border-astro-textMuted transition-colors text-center">
+                            <i class="ph ph-device-mobile text-2xl text-astro-cyan mb-2"></i>
+                            <div class="font-bold text-white">ANDROID APP</div>
+                            <div class="text-[10px] text-astro-textMuted mt-1">Field programming</div>
+                        </div>
+                    </div>
+
+                    <div class="h-8 arch-connector"></div>
+
+                    <!-- Layer 2: Core -->
+                    <div class="w-full text-center mb-2 text-[10px] text-astro-textMuted uppercase tracking-widest font-bold">Logic Layer</div>
+                    <div class="w-full bg-astro-cyan/5 border border-astro-cyan p-6 shadow-[0_0_20px_rgba(0,240,255,0.05)] text-center relative overflow-hidden">
+                        <div class="absolute -right-10 -bottom-10 opacity-10">
+                            <i class="ph-fill ph-cpu text-9xl"></i>
+                        </div>
+                        <div class="font-bold text-astro-cyan text-lg tracking-widest mb-4 flex items-center justify-center gap-2 relative z-10">
+                            <i class="ph ph-cpu text-xl"></i> SHARED CPS CORE
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px] text-astro-textMuted relative z-10">
+                            <div class="bg-astro-base/50 p-2 border border-astro-border">Codeplug Parsing</div>
+                            <div class="bg-astro-base/50 p-2 border border-astro-border">Data Models</div>
+                            <div class="bg-astro-base/50 p-2 border border-astro-border">Validation Rules</div>
+                            <div class="bg-astro-base/50 p-2 border border-astro-border">Diff Diagnostics</div>
+                        </div>
+                    </div>
+
+                    <div class="h-8 arch-connector"></div>
+
+                    <!-- Layer 3: Hardware Abstraction -->
+                    <div class="w-full text-center mb-2 text-[10px] text-astro-textMuted uppercase tracking-widest font-bold">Hardware Abstraction</div>
+                    <div class="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-astro-surface2 border-2 border-dashed border-astro-border p-4 text-center">
+                            <div class="font-bold text-white mb-2 flex justify-center items-center gap-2">
+                                <i class="ph ph-radio"></i> RADIO DRIVERS
+                            </div>
+                            <div class="text-[11px] text-astro-textMuted">Family-specific formats & block layouts</div>
+                        </div>
+                        <div class="bg-astro-surface2 border-2 border-dashed border-astro-border p-4 text-center">
+                            <div class="font-bold text-white mb-2 flex justify-center items-center gap-2">
+                                <i class="ph ph-usb"></i> TRANSPORT ADAPTERS
+                            </div>
+                            <div class="text-[11px] text-astro-textMuted">Serial / USB communication protocols</div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Benefits List -->
+            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-16 max-w-5xl mx-auto font-mono text-sm">
+                <div class="flex items-start gap-3">
+                    <i class="ph ph-check-circle text-astro-green text-lg shrink-0"></i>
+                    <span class="text-astro-textMuted"><strong class="text-astro-textMain font-medium">Shared Intelligence:</strong> The core handles validation, ensuring bugs are fixed once for all platforms.</span>
+                </div>
+                <div class="flex items-start gap-3">
+                    <i class="ph ph-check-circle text-astro-green text-lg shrink-0"></i>
+                    <span class="text-astro-textMuted"><strong class="text-astro-textMain font-medium">Native UIs:</strong> Frontends remain lightweight and respect their host OS design patterns.</span>
+                </div>
+                <div class="flex items-start gap-3">
+                    <i class="ph ph-check-circle text-astro-green text-lg shrink-0"></i>
+                    <span class="text-astro-textMuted"><strong class="text-astro-textMain font-medium">Modular Hardware:</strong> Radio drivers plug into the core, making future support scalable.</span>
+                </div>
+                <div class="flex items-start gap-3">
+                    <i class="ph ph-check-circle text-astro-green text-lg shrink-0"></i>
+                    <span class="text-astro-textMuted"><strong class="text-astro-textMain font-medium">Developer Ready:</strong> A decoupled core enables third-party scripting and automation tools.</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Technical Goals / Engineering -->
+        <section class="py-20 px-6 bg-astro-surface border-y border-astro-border relative overflow-hidden">
+            <div class="absolute -right-20 -top-20 opacity-5 pointer-events-none text-[300px] font-mono leading-none select-none">
+                0x
+            </div>
+            <div class="max-w-7xl mx-auto">
+                <div class="grid md:grid-cols-2 gap-16 items-center">
+                    <div>
+                        <h2 class="text-3xl md:text-4xl font-bold mb-6">Clean-Room Engineering.<br>Transparent Development.</h2>
+                        <p class="text-astro-textMuted mb-8 text-lg">
+                            OwnYourAstro is an independent, clean-room implementation of a programming core. By developing transparently and avoiding proprietary code, we ensure long-term preservation and permanent user control over configuration data.
+                        </p>
+                        
+                        <div class="space-y-6 font-mono text-sm">
+                            <div class="border-l-2 border-astro-cyan pl-4">
+                                <div class="text-white font-bold mb-1">Independent Implementation</div>
+                                <div class="text-astro-textMuted">Built from the ground up through observation, documentation, and rigorous testing, without relying on existing proprietary software code.</div>
+                            </div>
+                            <div class="border-l-2 border-astro-border pl-4 hover:border-astro-cyan transition-colors">
+                                <div class="text-white font-bold mb-1">Configuration Modeling & Validation</div>
+                                <div class="text-astro-textMuted">Creating strict mathematical data models to ensure generated codeplugs are logically sound before they ever touch the hardware.</div>
+                            </div>
+                            <div class="border-l-2 border-astro-border pl-4 hover:border-astro-cyan transition-colors">
+                                <div class="text-white font-bold mb-1">Binary Serialization</div>
+                                <div class="text-astro-textMuted">Robust parsing and generation of proprietary block structures, designed to prevent data corruption during translation.</div>
+                            </div>
+                            <div class="border-l-2 border-astro-border pl-4 hover:border-astro-cyan transition-colors">
+                                <div class="text-white font-bold mb-1">Data Ownership</div>
+                                <div class="text-astro-textMuted">Your configurations remain accessible in open formats, easily inspectable, and immune to software obsolescence.</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Terminal Mockup -->
+                    <div class="bg-astro-base rounded border border-astro-border shadow-2xl p-4 font-mono text-xs md:text-sm relative">
+                        <div class="absolute top-3 right-3 text-[9px] text-astro-textMuted uppercase tracking-wider bg-astro-surface px-2 py-1 rounded border border-astro-border">Conceptual Output</div>
+                        
+                        <div class="flex gap-2 mb-4 border-b border-astro-border pb-2">
+                            <div class="w-3 h-3 rounded-full bg-astro-border"></div>
+                            <div class="w-3 h-3 rounded-full bg-astro-border"></div>
+                            <div class="w-3 h-3 rounded-full bg-astro-border"></div>
+                        </div>
+                        <div class="text-astro-textMuted space-y-1">
+                            <div class="flex"><span class="text-astro-cyan mr-2">$</span> <span class="text-white">oya-cli inspect target_backup.cp</span></div>
+                            <div>[INFO] Initializing shared CPS core... OK</div>
+                            <div>[INFO] Checksum structural validation: <span class="text-astro-green">PASSED</span></div>
+                            <div>[INFO] Extracting block map...</div>
+                            <div class="pl-4 border-l border-astro-border ml-2 my-2 py-1 text-[11px] text-astro-muted">
+                                Block 0x01: RADIO_WIDE (Size: 256b)<br>
+                                Block 0x02: BUTTON_MAP (Size: 128b)<br>
+                                Block 0x05: CONV_ZONES (Count: 3)<br>
+                                Block 0x0A: CONV_PERS (Count: 16)
+                            </div>
+                            <div class="flex"><span class="text-astro-cyan mr-2">$</span> <span class="text-white">oya-cli validate --strict</span></div>
+                            <div>Evaluating logical constraints against model schema...</div>
+                            <div><span class="text-astro-amber">[WARN]</span> Zone 1, Channel 16 references unassigned Rx NAC.</div>
+                            <div><span class="text-astro-amber">[WARN]</span> Feature block contains unsupported legacy tag.</div>
+                            <div class="flex mt-4"><span class="text-astro-cyan mr-2 animate-pulse">_</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Roadmap / Compatibility -->
+        <section id="roadmap" class="py-20 px-6 max-w-7xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">Development Direction.</h2>
+                <p class="text-astro-textMuted text-lg max-w-2xl mx-auto">
+                    The project is currently focused on establishing the architectural foundation and researching initial radio support. We are prioritizing the Motorola ASTRO 25 family as our testbed.
+                </p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-6 font-mono text-sm max-w-5xl mx-auto">
+                
+                <!-- Status Column 1 -->
+                <div class="tech-border p-6 bg-astro-surface">
+                    <div class="corner-bl"></div><div class="corner-br"></div>
+                    <div class="text-astro-amber font-bold flex items-center gap-2 mb-4 border-b border-astro-border pb-2">
+                        <i class="ph ph-microscope"></i> Research
+                    </div>
+                    <ul class="space-y-3 text-astro-textMuted">
+                        <li class="flex gap-2"><i class="ph ph-dot-outline mt-0.5 shrink-0"></i> <span>Protocol reverse engineering</span></li>
+                        <li class="flex gap-2"><i class="ph ph-dot-outline mt-0.5 shrink-0"></i> <span>Configuration data mapping</span></li>
+                        <li class="flex gap-2"><i class="ph ph-dot-outline mt-0.5 shrink-0"></i> <span>Hardware abstraction design</span></li>
+                        <li class="flex gap-2"><i class="ph ph-dot-outline mt-0.5 shrink-0"></i> <span>Cross-model compatibility studies</span></li>
+                    </ul>
+                </div>
+
+                <!-- Status Column 2 -->
+                <div class="tech-border p-6 bg-astro-base border border-astro-cyan shadow-[0_0_15px_rgba(0,240,255,0.05)]">
+                    <div class="corner-bl bg-astro-cyan"></div><div class="corner-br bg-astro-cyan"></div>
+                    <div class="text-astro-cyan font-bold flex items-center gap-2 mb-4 border-b border-astro-border pb-2">
+                        <i class="ph ph-terminal-window"></i> Active Development
+                    </div>
+                    <ul class="space-y-3 text-astro-textMain">
+                        <li class="flex gap-2"><i class="ph-fill ph-caret-right text-astro-cyan mt-0.5 shrink-0"></i> <span>Shared CPS Core foundation</span></li>
+                        <li class="flex gap-2"><i class="ph-fill ph-caret-right text-astro-cyan mt-0.5 shrink-0"></i> <span>Clean-room binary parsers</span></li>
+                        <li class="flex gap-2"><i class="ph-fill ph-caret-right text-astro-cyan mt-0.5 shrink-0"></i> <span>Data validation engine</span></li>
+                        <li class="flex gap-2"><i class="ph-fill ph-caret-right text-astro-cyan mt-0.5 shrink-0"></i> <span>Conceptual web interface</span></li>
+                    </ul>
+                </div>
+
+                <!-- Status Column 3 -->
+                <div class="tech-border p-6 bg-astro-surface text-opacity-50">
+                    <div class="corner-bl"></div><div class="corner-br"></div>
+                    <div class="text-astro-textMuted font-bold flex items-center gap-2 mb-4 border-b border-astro-border pb-2">
+                        <i class="ph ph-map-pin"></i> Planned Direction
+                    </div>
+                    <ul class="space-y-3 text-astro-textMuted">
+                        <li class="flex gap-2"><i class="ph ph-dot-outline mt-0.5 shrink-0"></i> <span>Verified radio drivers</span></li>
+                        <li class="flex gap-2"><i class="ph ph-dot-outline mt-0.5 shrink-0"></i> <span>Native Desktop applications</span></li>
+                        <li class="flex gap-2"><i class="ph ph-dot-outline mt-0.5 shrink-0"></i> <span>Android field interface</span></li>
+                        <li class="flex gap-2"><i class="ph ph-dot-outline mt-0.5 shrink-0"></i> <span>Expanded transport adapters</span></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="mt-8 text-center text-xs text-astro-textMuted font-mono">
+                * Note: This outlines architectural intent, not a guarantee of universal compatibility or immediate production readiness.
+            </div>
+        </section>
+
+        <!-- Call to Action -->
+        <section class="py-24 px-6 border-t border-astro-border bg-gradient-to-b from-astro-base to-astro-surface">
+            <div class="max-w-3xl mx-auto text-center">
+                <i class="ph ph-code-block text-4xl text-astro-cyan mb-6 block"></i>
+                <h2 class="text-3xl md:text-5xl font-bold mb-6">Help Build the Future of Radio Programming.</h2>
+                <p class="text-astro-textMuted text-lg mb-10">
+                    OwnYourAstro is an open-source engineering initiative. Whether you are a developer, a protocol analyst, or a radio enthusiast willing to test, your contribution helps secure the long-term usability of our hardware.
+                </p>
+                <div class="flex flex-col sm:flex-row justify-center gap-4 font-mono text-sm">
+                    <a href="https://github.com/OwnYourAstro" target="_blank" rel="noopener" class="inline-flex justify-center items-center gap-2 bg-white text-black px-8 py-4 font-bold hover:bg-gray-200 transition-colors">
+                        <i class="ph-fill ph-github-logo text-lg"></i>
+                        View Source Code
+                    </a>
+                    <a href="#roadmap" class="inline-flex justify-center items-center gap-2 border border-astro-border bg-astro-base hover:bg-astro-surface px-8 py-4 text-astro-textMain transition-colors">
+                        Follow Development
+                    </a>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-astro-base border-t border-astro-border pt-16 pb-8 px-6 text-sm">
+        <div class="max-w-7xl mx-auto">
+            <div class="grid md:grid-cols-4 gap-8 mb-12">
+                <div class="md:col-span-2">
+                    <div class="flex items-center gap-2 mb-4">
+                        <i class="ph ph-radio font-bold text-astro-textMuted text-xl"></i>
+                        <span class="font-mono font-bold text-astro-textMuted">OwnYourAstro</span>
+                    </div>
+                    <p class="text-astro-textMuted max-w-sm">
+                        An open, platform-independent implementation of radio programming software, dedicated to giving operators permanent ownership over their hardware configuration.
+                    </p>
+                </div>
+                
+                <div>
+                    <h4 class="font-bold font-mono text-white mb-4">Project</h4>
+                    <ul class="space-y-2 text-astro-textMuted font-mono text-xs">
+                        <li><a href="https://github.com/OwnYourAstro" target="_blank" rel="noopener" class="hover:text-astro-cyan transition-colors">Source Code (GitHub)</a></li>
+                        <li><a href="#" class="hover:text-astro-cyan transition-colors">Issue Tracker</a></li>
+                        <li><span class="text-astro-textMuted opacity-50 cursor-not-allowed">Documentation (WIP)</span></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="font-bold font-mono text-white mb-4">Community</h4>
+                    <ul class="space-y-2 text-astro-textMuted font-mono text-xs">
+                        <li><a href="#" class="hover:text-astro-cyan transition-colors">Project Announcements</a></li>
+                        <li><a href="#" class="hover:text-astro-cyan transition-colors">Contributing Guide</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="border-t border-astro-border pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+                <p class="text-astro-textMuted text-xs text-center md:text-left max-w-3xl">
+                    <strong>Disclaimer:</strong> OwnYourAstro is an independent, community-driven software project. It is not affiliated with, endorsed by, or sponsored by Motorola Solutions. Motorola and ASTRO are trademarks of their respective owners.
+                </p>
+                <div class="font-mono text-xs text-astro-borderHover">
+                    &copy; 2026 OwnYourAstro Project
+                </div>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>
