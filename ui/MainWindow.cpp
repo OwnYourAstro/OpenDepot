@@ -6,60 +6,55 @@
 #include <QAction>
 #include <QAbstractItemView>
 #include <QApplication>
+#include <QColor>
+#include <QDateTime>
+#include <QDialog>
 #include <QFileDialog>
+#include <QFileInfo>
+#include <QFont>
+#include <QFrame>
 #include <QGridLayout>
-#include <QGroupBox>
+#include <QHBoxLayout>
 #include <QHeaderView>
 #include <QKeySequence>
 #include <QLabel>
 #include <QLineEdit>
-#include <QListWidget>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QProgressDialog>
 #include <QPushButton>
-#include <QSplitter>
+#include <QScrollArea>
 #include <QStackedWidget>
 #include <QStatusBar>
+#include <QStyle>
 #include <QTableWidget>
 #include <QTimer>
 #include <QToolBar>
+#include <QTreeWidget>
 #include <QVBoxLayout>
 
+#include <algorithm>
 #include <filesystem>
 #include <vector>
 
 #include "opendepot/core/radio.h"
 
+namespace {
+constexpr int kInfoPage = 0;
+constexpr int kReportPage = 1;
+constexpr int kDoctorPage = 2;
+constexpr int kDiffPage = 3;
+constexpr int kRadioPage = 4;
+}  // namespace
+
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     setWindowTitle("OpenDepot");
-    resize(1180, 760);
-
+    resize(1320, 860);
     setupMenu();
-
-    auto* split = new QSplitter(this);
-    nav_ = new QListWidget;
-    nav_->addItems({"Dashboard", "Service Report", "Doctor", "Diff", "Radio"});
-    nav_->setFixedWidth(190);
-    nav_->setObjectName("nav");
-
-    pages_ = new QStackedWidget;
-    pages_->addWidget(buildDashboard());
-    pages_->addWidget(
-        buildTextPage(&report_, "Generate report", &MainWindow::generateReport));
-    pages_->addWidget(buildTextPage(&doctor_, "Run doctor", &MainWindow::runDoctor));
-    pages_->addWidget(
-        buildTextPage(&diff_, "Compare with codeplug...", &MainWindow::compareCodeplug));
-    pages_->addWidget(buildRadioPage());
-
-    connect(nav_, &QListWidget::currentRowChanged, pages_, &QStackedWidget::setCurrentIndex);
-    split->addWidget(nav_);
-    split->addWidget(pages_);
-    split->setStretchFactor(1, 1);
-    setCentralWidget(split);
-
-    statusBar()->showMessage("Open a codeplug or read a radio.");
+    setupUi();
+    setModelStatus("Model: -");
+    statusBar()->showMessage("Ready");
 
     poll_ = new QTimer(this);
     poll_->setInterval(200);
@@ -84,7 +79,14 @@ void MainWindow::setupMenu() {
     quit->setShortcut(QKeySequence::Quit);
     connect(quit, &QAction::triggered, this, &QWidget::close);
 
+    auto* view = menuBar()->addMenu("&View");
+    connect(view->addAction("&Expand All"), &QAction::triggered, this,
+            [this] { tree_->expandAll(); });
+    connect(view->addAction("&Collapse All"), &QAction::triggered, this,
+            [this] { tree_->collapseAll(); });
+
     auto* tools = menuBar()->addMenu("&Tools");
+    connect(tools->addAction("&Records"), &QAction::triggered, this, &MainWindow::showRecords);
     connect(tools->addAction("Service &Report"), &QAction::triggered, this,
             &MainWindow::generateReport);
     connect(tools->addAction("Codeplug &Doctor"), &QAction::triggered, this,
@@ -102,57 +104,273 @@ void MainWindow::setupMenu() {
 
     auto* bar = addToolBar("Main");
     bar->setMovable(false);
-    bar->addAction(open);
-    bar->addAction(saveAct_);
+    auto add = [&](QStyle::StandardPixmap icon, const QString& text, void (MainWindow::*slot)()) {
+        auto* a = bar->addAction(style()->standardIcon(icon), text);
+        connect(a, &QAction::triggered, this, slot);
+    };
+    add(QStyle::SP_DialogOpenButton, "Open", &MainWindow::openCodeplug);
+    auto* saveBtn = bar->addAction(style()->standardIcon(QStyle::SP_DialogSaveButton), "Save");
+    connect(saveBtn, &QAction::triggered, this, &MainWindow::saveCodeplugAs);
     bar->addSeparator();
-    bar->addAction(tools->actions().first());
+    add(QStyle::SP_ArrowDown, "Read Radio", &MainWindow::readRadio);
+    add(QStyle::SP_ArrowUp, "Write Radio", &MainWindow::writeRadio);
 }
 
-QWidget* MainWindow::buildDashboard() {
-    auto* page = new QWidget;
-    auto* lay = new QVBoxLayout(page);
+void MainWindow::setupUi() {
+    auto* central = new QWidget;
+    auto* root = new QHBoxLayout(central);
+    root->setContentsMargins(0, 0, 0, 0);
+    root->setSpacing(0);
 
-    auto* title = new QLabel("Codeplug");
+    auto* treePanel = new QWidget;
+    treePanel->setObjectName("treePanel");
+    treePanel->setFixedWidth(292);
+    auto* tl = new QVBoxLayout(treePanel);
+    tl->setContentsMargins(10, 12, 10, 10);
+    tl->setSpacing(8);
+    auto* heading = new QLabel("Tree View");
+    heading->setObjectName("treeHeading");
+    tl->addWidget(heading);
+
+    buildTree();
+    tl->addWidget(tree_, 1);
+
+    auto* buttons = new QHBoxLayout;
+    auto* closeBtn = new QPushButton("Close");
+    closeBtn->setObjectName("small");
+    connect(closeBtn, &QPushButton::clicked, this, &QWidget::close);
+    auto* helpBtn = new QPushButton("Help");
+    helpBtn->setObjectName("small");
+    connect(helpBtn, &QPushButton::clicked, this, &MainWindow::about);
+    auto* expandBtn = new QPushButton("Expand All");
+    expandBtn->setObjectName("small");
+    connect(expandBtn, &QPushButton::clicked, tree_, &QTreeWidget::expandAll);
+    buttons->addWidget(closeBtn);
+    buttons->addWidget(helpBtn);
+    buttons->addWidget(expandBtn);
+    buttons->addStretch(1);
+    tl->addLayout(buttons);
+
+    root->addWidget(treePanel);
+
+    pages_ = new QStackedWidget;
+    pages_->addWidget(buildRadioInfoPage());
+    pages_->addWidget(buildTextPage("Service Report", &report_, "Generate report",
+                                    &MainWindow::generateReport));
+    pages_->addWidget(buildTextPage("Codeplug Doctor", &doctor_, "Run doctor",
+                                    &MainWindow::runDoctor));
+    pages_->addWidget(buildTextPage("Codeplug Diff", &diff_, "Compare with codeplug...",
+                                    &MainWindow::compareCodeplug));
+    pages_->addWidget(buildRadioPage());
+    pages_->setCurrentIndex(kInfoPage);
+    root->addWidget(pages_, 1);
+
+    setCentralWidget(central);
+}
+
+void MainWindow::buildTree() {
+    tree_ = new QTreeWidget;
+    tree_->setObjectName("tree");
+    tree_->setHeaderHidden(true);
+    tree_->setColumnCount(1);
+    tree_->setIndentation(16);
+    tree_->setIconSize(QSize(16, 16));
+
+    auto icon = [this](QStyle::StandardPixmap p) { return style()->standardIcon(p); };
+
+    treeRoot_ = new QTreeWidgetItem(tree_, QStringList{"No codeplug"});
+    treeRoot_->setIcon(0, icon(QStyle::SP_ComputerIcon));
+    treeRoot_->setData(0, Qt::UserRole, kInfoPage);
+
+    auto* info = new QTreeWidgetItem(treeRoot_, QStringList{"Radio Information"});
+    info->setIcon(0, icon(QStyle::SP_MessageBoxInformation));
+    info->setData(0, Qt::UserRole, kInfoPage);
+
+    auto* config = new QTreeWidgetItem(treeRoot_, QStringList{"Radio Configuration"});
+    config->setIcon(0, icon(QStyle::SP_DirIcon));
+    config->setData(0, Qt::UserRole, kInfoPage);
+    for (const char* n : {"Radio Wide", "Controls", "Keypad", "Display & Menu"}) {
+        auto* it = new QTreeWidgetItem(config, QStringList{QString::fromLatin1(n)});
+        it->setIcon(0, icon(QStyle::SP_FileIcon));
+        it->setData(0, Qt::UserRole, kInfoPage);
+    }
+
+    auto* conv = new QTreeWidgetItem(treeRoot_, QStringList{"Conventional"});
+    conv->setIcon(0, icon(QStyle::SP_DirIcon));
+    conv->setData(0, Qt::UserRole, kInfoPage);
+    auto* zonesIt = new QTreeWidgetItem(conv, QStringList{"Zones & Channels"});
+    zonesIt->setIcon(0, icon(QStyle::SP_FileIcon));
+    zonesIt->setData(0, Qt::UserRole, kInfoPage);
+    zonesIt->setData(0, Qt::UserRole + 1, "zones");
+
+    for (const char* n : {"ASTRO Systems", "Trunking", "Scan"}) {
+        auto* it = new QTreeWidgetItem(treeRoot_, QStringList{QString::fromLatin1(n)});
+        it->setIcon(0, icon(QStyle::SP_DirIcon));
+        it->setData(0, Qt::UserRole, kInfoPage);
+    }
+
+    auto* tools = new QTreeWidgetItem(treeRoot_, QStringList{"Tools"});
+    tools->setIcon(0, icon(QStyle::SP_DirIcon));
+    tools->setData(0, Qt::UserRole, kInfoPage);
+    struct ToolItem {
+        const char* name;
+        int page;
+    };
+    const ToolItem toolItems[] = {{"Service Report", kReportPage},
+                                  {"Codeplug Doctor", kDoctorPage},
+                                  {"Diff", kDiffPage},
+                                  {"Radio", kRadioPage}};
+    for (const auto& t : toolItems) {
+        auto* it = new QTreeWidgetItem(tools, QStringList{QString::fromLatin1(t.name)});
+        it->setIcon(0, icon(QStyle::SP_FileIcon));
+        it->setData(0, Qt::UserRole, t.page);
+    }
+
+    tree_->expandAll();
+
+    connect(tree_, &QTreeWidget::currentItemChanged, this,
+            [this](QTreeWidgetItem* cur, QTreeWidgetItem*) {
+                if (!cur) return;
+                if (cur->data(0, Qt::UserRole + 1).toString() == "zones") {
+                    showZones();
+                    return;
+                }
+                pages_->setCurrentIndex(cur->data(0, Qt::UserRole).toInt());
+            });
+}
+
+QWidget* MainWindow::makeCard(const QString& caption, QLabel** value, const QString& initial) {
+    auto* frame = new QFrame;
+    frame->setObjectName("card");
+    auto* lay = new QVBoxLayout(frame);
+    lay->setContentsMargins(16, 14, 16, 14);
+    lay->setSpacing(6);
+    auto* cap = new QLabel(caption.toUpper());
+    cap->setObjectName("cardCaption");
+    *value = new QLabel(initial);
+    (*value)->setObjectName("cardValue");
+    (*value)->setWordWrap(true);
+    (*value)->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    lay->addWidget(cap);
+    lay->addWidget(*value);
+    lay->addStretch(1);
+    return frame;
+}
+
+QWidget* MainWindow::buildRadioInfoPage() {
+    auto* scroll = new QScrollArea;
+    scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
+    infoScroll_ = scroll;
+
+    auto* content = new QWidget;
+    content->setObjectName("contentRoot");
+    auto* lay = new QVBoxLayout(content);
+    lay->setContentsMargins(32, 26, 32, 32);
+    lay->setSpacing(18);
+
+    auto* header = new QHBoxLayout;
+    auto* titles = new QVBoxLayout;
+    titles->setSpacing(2);
+    auto* title = new QLabel("Radio Information");
     title->setObjectName("pageTitle");
-    lay->addWidget(title);
+    subtitle_ = new QLabel("No codeplug loaded");
+    subtitle_->setObjectName("muted");
+    titles->addWidget(title);
+    titles->addWidget(subtitle_);
+    header->addLayout(titles);
+    header->addStretch(1);
+    auto* readBtn = new QPushButton("Read Radio");
+    readBtn->setObjectName("accent");
+    connect(readBtn, &QPushButton::clicked, this, &MainWindow::readRadio);
+    auto* recBtn = new QPushButton("Records");
+    connect(recBtn, &QPushButton::clicked, this, &MainWindow::showRecords);
+    auto* zonesBtn = new QPushButton("Zones");
+    connect(zonesBtn, &QPushButton::clicked, this, &MainWindow::showZones);
+    header->addWidget(readBtn);
+    header->addWidget(recBtn);
+    header->addWidget(zonesBtn);
+    lay->addLayout(header);
 
-    auto* idBox = new QGroupBox("Identity");
-    auto* grid = new QGridLayout(idBox);
-    identity_ = new QLabel("No codeplug loaded");
-    flashcode_ = new QLabel("-");
-    counts_ = new QLabel("-");
-    grid->addWidget(new QLabel("Radio"), 0, 0);
-    grid->addWidget(identity_, 0, 1);
-    grid->addWidget(new QLabel("FLASHcode"), 1, 0);
-    grid->addWidget(flashcode_, 1, 1);
-    grid->addWidget(new QLabel("Records"), 2, 0);
-    grid->addWidget(counts_, 2, 1);
+    auto* grid = new QGridLayout;
+    grid->setHorizontalSpacing(14);
+    grid->setVerticalSpacing(14);
+    grid->addWidget(makeCard("Serial", &serial_), 0, 0);
+    grid->addWidget(makeCard("Model", &model_), 0, 1);
+    grid->addWidget(makeCard("FLASHcode", &flashcode_), 0, 2);
+    grid->addWidget(makeCard("Header version", &headerVersion_), 1, 0);
+    grid->addWidget(makeCard("Records", &recordCount_), 1, 1);
+    grid->addWidget(makeCard("Passcode", &passcode_), 1, 2);
+    grid->addWidget(makeCard("Codeplug file", &codeplugFile_, "No codeplug loaded"), 2, 0, 1, 2);
+
+    auto* explore = new QFrame;
+    explore->setObjectName("card");
+    auto* el = new QVBoxLayout(explore);
+    el->setContentsMargins(16, 14, 16, 14);
+    el->setSpacing(6);
+    auto* exCap = new QLabel("EXPLORE");
+    exCap->setObjectName("cardCaption");
+    auto* browse = new QPushButton("Browse this codeplug's records");
+    browse->setObjectName("link");
+    connect(browse, &QPushButton::clicked, this, &MainWindow::showRecords);
+    auto* zoneLink = new QPushButton("Zone and channel details");
+    zoneLink->setObjectName("link");
+    connect(zoneLink, &QPushButton::clicked, this, &MainWindow::showZones);
+    el->addWidget(exCap);
+    el->addWidget(browse);
+    el->addWidget(zoneLink);
+    el->addStretch(1);
+    grid->addWidget(explore, 2, 2);
+
+    grid->setColumnStretch(0, 1);
     grid->setColumnStretch(1, 1);
-    lay->addWidget(idBox);
+    grid->setColumnStretch(2, 1);
+    lay->addLayout(grid);
 
-    auto* zoneBox = new QGroupBox("Zones and channels");
-    auto* zlay = new QVBoxLayout(zoneBox);
-    zones_ = new QTableWidget(0, 4);
-    zones_->setHorizontalHeaderLabels({"Zone", "Channel", "Rx MHz", "Tx MHz"});
-    zones_->horizontalHeader()->setStretchLastSection(true);
+    auto* feat = new QLabel("FLASHcode Features");
+    feat->setObjectName("sectionTitle");
+    lay->addWidget(feat);
+    chips_ = new QWidget;
+    chipsLayout_ = new QGridLayout(chips_);
+    chipsLayout_->setContentsMargins(0, 0, 0, 0);
+    chipsLayout_->setHorizontalSpacing(8);
+    chipsLayout_->setVerticalSpacing(8);
+    lay->addWidget(chips_);
+
+    auto* zoneTitle = new QLabel("Zones and Channels");
+    zoneTitle->setObjectName("sectionTitle");
+    lay->addWidget(zoneTitle);
+    zones_ = new QTableWidget(0, 5);
+    zones_->setHorizontalHeaderLabels({"#", "Channel", "Mode", "RX MHz", "TX MHz"});
+    zones_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    zones_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
     zones_->verticalHeader()->setVisible(false);
+    zones_->verticalHeader()->setDefaultSectionSize(34);
     zones_->setEditTriggers(QAbstractItemView::NoEditTriggers);
     zones_->setSelectionBehavior(QAbstractItemView::SelectRows);
-    zlay->addWidget(zones_);
-    lay->addWidget(zoneBox, 1);
-    return page;
+    zones_->setShowGrid(false);
+    lay->addWidget(zones_);
+    lay->addStretch(1);
+
+    scroll->setWidget(content);
+    return scroll;
 }
 
-QWidget* MainWindow::buildTextPage(QPlainTextEdit** out, const QString& button,
-                                   void (MainWindow::*handler)()) {
+QWidget* MainWindow::buildTextPage(const QString& titleText, QPlainTextEdit** out,
+                                   const QString& button, void (MainWindow::*handler)()) {
     auto* page = new QWidget;
     auto* lay = new QVBoxLayout(page);
+    lay->setContentsMargins(32, 26, 32, 32);
+    lay->setSpacing(12);
+    auto* title = new QLabel(titleText);
+    title->setObjectName("pageTitle");
+    lay->addWidget(title);
     auto* btn = new QPushButton(button);
     connect(btn, &QPushButton::clicked, this, handler);
+    lay->addWidget(btn, 0, Qt::AlignLeft);
     *out = new QPlainTextEdit;
     (*out)->setReadOnly(true);
     (*out)->setPlaceholderText("Nothing to show yet.");
-    lay->addWidget(btn, 0, Qt::AlignLeft);
     lay->addWidget(*out, 1);
     return page;
 }
@@ -160,32 +378,36 @@ QWidget* MainWindow::buildTextPage(QPlainTextEdit** out, const QString& button,
 QWidget* MainWindow::buildRadioPage() {
     auto* page = new QWidget;
     auto* lay = new QVBoxLayout(page);
-
+    lay->setContentsMargins(32, 26, 32, 32);
+    lay->setSpacing(14);
     auto* title = new QLabel("Radio");
     title->setObjectName("pageTitle");
     lay->addWidget(title);
 
-    auto* box = new QGroupBox("Native transport (clean room)");
-    auto* blay = new QVBoxLayout(box);
+    auto* card = new QFrame;
+    card->setObjectName("card");
+    auto* cl = new QVBoxLayout(card);
+    cl->setContentsMargins(18, 16, 18, 16);
+    cl->setSpacing(10);
     auto* row = new QHBoxLayout;
     row->addWidget(new QLabel("Port"));
     port_ = new QLineEdit("COM20");
-    port_->setMaximumWidth(140);
+    port_->setMaximumWidth(150);
     row->addWidget(port_);
     auto* read = new QPushButton("Read Radio");
-    auto* write = new QPushButton("Write Radio...");
     read->setObjectName("accent");
+    auto* write = new QPushButton("Write Radio...");
     row->addWidget(read);
     row->addWidget(write);
     row->addStretch(1);
-    blay->addLayout(row);
+    cl->addLayout(row);
     auto* note = new QLabel(
         "Reads and writes use OpenDepot's own serial/PPP/RCMP transport. "
         "A write can brick a radio; keep a verified backup.");
-    note->setWordWrap(true);
     note->setObjectName("muted");
-    blay->addWidget(note);
-    lay->addWidget(box);
+    note->setWordWrap(true);
+    cl->addWidget(note);
+    lay->addWidget(card);
 
     radioLog_ = new QPlainTextEdit;
     radioLog_->setReadOnly(true);
@@ -196,11 +418,25 @@ QWidget* MainWindow::buildRadioPage() {
     return page;
 }
 
+void MainWindow::setModelStatus(const QString& text) {
+    if (!modelStatus_) {
+        modelStatus_ = new QLabel(text);
+        modelStatus_->setObjectName("muted");
+        statusBar()->addPermanentWidget(modelStatus_);
+    } else {
+        modelStatus_->setText(text);
+    }
+}
+
 void MainWindow::openCodeplug() {
     const QString start = path_.isEmpty() ? QString() : path_;
     const QString file = QFileDialog::getOpenFileName(this, "Open codeplug", start,
                                                       "Codeplug (*.cpg);;All files (*)");
     if (file.isEmpty()) return;
+    openFile(file);
+}
+
+void MainWindow::openFile(const QString& file) {
     opendepot::Codeplug cp;
     if (!opendepot::LoadCodeplug(std::filesystem::path(file.toStdWString()), cp)) {
         QMessageBox::critical(this, "Open codeplug",
@@ -222,6 +458,7 @@ void MainWindow::saveCodeplugAs() {
         return;
     }
     path_ = file;
+    updateDashboard();
     statusBar()->showMessage("Saved " + file, 8000);
 }
 
@@ -229,53 +466,170 @@ void MainWindow::setCodeplug(opendepot::Codeplug cp, const QString& path) {
     cp_ = std::move(cp);
     have_ = true;
     path_ = path;
+    openedAt_ = QDateTime::currentDateTime();
     saveAct_->setEnabled(true);
-
-    identity_->setText(QString("%1 / %2")
-                           .arg(QString::fromStdString(cp_.header.model),
-                                QString::fromStdString(cp_.header.serial)));
-    flashcode_->setText(QString::fromStdString(opendepot::GetFlashcode(cp_)));
-    size_t good = 0;
-    for (const auto& r : cp_.records)
-        if (r.verified) ++good;
-    counts_->setText(QString("%1 records, %2 CRC-ok")
-                         .arg(static_cast<qulonglong>(cp_.records.size()))
-                         .arg(static_cast<qulonglong>(good)));
-
-    std::vector<opendepot::ZoneView> zones;
-    opendepot::ParseZones(cp_, zones);
-    zones_->setRowCount(0);
-    for (const auto& z : zones) {
-        if (z.channels.empty()) {
-            const int row = zones_->rowCount();
-            zones_->insertRow(row);
-            zones_->setItem(row, 0, new QTableWidgetItem(QString::fromStdString(z.name)));
-            zones_->setItem(row, 1, new QTableWidgetItem("-"));
-            zones_->setItem(row, 2, new QTableWidgetItem(""));
-            zones_->setItem(row, 3, new QTableWidgetItem(""));
-            continue;
-        }
-        for (const auto& ch : z.channels) {
-            const int row = zones_->rowCount();
-            zones_->insertRow(row);
-            zones_->setItem(row, 0, new QTableWidgetItem(QString::fromStdString(z.name)));
-            zones_->setItem(row, 1,
-                            new QTableWidgetItem(QString::fromStdString(ch.name)));
-            zones_->setItem(row, 2,
-                            new QTableWidgetItem(QString::number(
-                                opendepot::WordToMHz(ch.rxWord), 'f', 5)));
-            zones_->setItem(row, 3,
-                            new QTableWidgetItem(QString::number(
-                                opendepot::WordToMHz(ch.txWord), 'f', 5)));
-        }
-    }
-    zones_->resizeColumnsToContents();
+    if (treeRoot_)
+        treeRoot_->setText(0, QString::fromStdString(cp_.header.serial) + "  " +
+                                 QString::fromStdString(cp_.header.model));
+    updateDashboard();
+    pages_->setCurrentIndex(kInfoPage);
+    tree_->setCurrentItem(treeRoot_);
     statusBar()->showMessage("Loaded " + path, 8000);
 }
 
-void MainWindow::refreshViews() {
+void MainWindow::updateDashboard() {
+    if (!have_) {
+        serial_->setText("-");
+        model_->setText("-");
+        flashcode_->setText("-");
+        headerVersion_->setText("-");
+        recordCount_->setText("-");
+        passcode_->setText("-");
+        codeplugFile_->setText("No codeplug loaded");
+        subtitle_->setText("No codeplug loaded");
+        setModelStatus("Model: -");
+        return;
+    }
+    serial_->setText(QString::fromStdString(cp_.header.serial));
+    model_->setText(QString::fromStdString(cp_.header.model));
+    flashcode_->setText(QString::fromStdString(opendepot::GetFlashcode(cp_)));
+    headerVersion_->setText(QString::fromStdString(cp_.header.version));
+    size_t good = 0;
+    for (const auto& r : cp_.records)
+        if (r.verified) ++good;
+    recordCount_->setText(QString("%1 / %2 CRC-verified")
+                              .arg(static_cast<qulonglong>(cp_.records.size()))
+                              .arg(static_cast<qulonglong>(good)));
+
+    opendepot::CodeplugPassword pw;
+    if (opendepot::GetCodeplugPassword(cp_, pw) && pw.present)
+        passcode_->setText(pw.enabled ? "Set (enabled)" : "Set (disabled)");
+    else
+        passcode_->setText("Not set");
+
+    const QFileInfo info(path_);
+    codeplugFile_->setText(info.fileName().isEmpty() ? "No codeplug loaded" : info.fileName());
+    codeplugFile_->setToolTip(path_);
+    subtitle_->setText(QString("Codeplug opened from %1 on %2")
+                           .arg(info.fileName(), openedAt_.toString("yyyy-MM-dd HH:mm:ss")));
+    setModelStatus("Model: " + QString::fromStdString(cp_.header.model));
+
+    while (auto* item = chipsLayout_->takeAt(0)) {
+        if (item->widget()) item->widget()->deleteLater();
+        delete item;
+    }
+    const auto features = opendepot::EnabledFeatures(opendepot::GetFlashcode(cp_));
+    int row = 0, col = 0;
+    for (const auto& f : features) {
+        auto* chip = new QLabel(QString::fromStdString(f));
+        chip->setObjectName("chip");
+        chipsLayout_->addWidget(chip, row, col);
+        if (++col == 4) {
+            col = 0;
+            ++row;
+        }
+    }
+    if (features.empty()) {
+        auto* none = new QLabel("No FLASHcode features decoded");
+        none->setObjectName("muted");
+        chipsLayout_->addWidget(none, 0, 0);
+    }
+
+    fillZones(zones_, true);
+}
+
+void MainWindow::fillZones(QTableWidget* table, bool groupRows) {
+    table->setRowCount(0);
     if (!have_) return;
-    setCodeplug(cp_, path_);
+    std::vector<opendepot::ZoneView> zones;
+    opendepot::ParseZones(cp_, zones);
+
+    int index = 0;
+    for (const auto& z : zones) {
+        if (groupRows) {
+            const int row = table->rowCount();
+            table->insertRow(row);
+            auto* item = new QTableWidgetItem(
+                QString("%1    %2 channel(s)")
+                    .arg(QString::fromStdString(z.name))
+                    .arg(static_cast<int>(z.channels.size())));
+            QFont f = table->font();
+            f.setBold(true);
+            item->setFont(f);
+            item->setBackground(QColor("#f8fafc"));
+            item->setForeground(QColor("#475569"));
+            table->setItem(row, 0, item);
+            table->setSpan(row, 0, 1, 5);
+            table->setRowHeight(row, 34);
+        }
+        if (z.channels.empty()) {
+            const int row = table->rowCount();
+            table->insertRow(row);
+            table->setItem(row, 0, new QTableWidgetItem(""));
+            table->setItem(row, 1, new QTableWidgetItem("-"));
+            table->setItem(row, 2, new QTableWidgetItem(""));
+            table->setItem(row, 3, new QTableWidgetItem(""));
+            table->setItem(row, 4, new QTableWidgetItem(""));
+            continue;
+        }
+        for (const auto& ch : z.channels) {
+            const int row = table->rowCount();
+            table->insertRow(row);
+            table->setItem(row, 0, new QTableWidgetItem(QString::number(index++)));
+            table->setItem(row, 1, new QTableWidgetItem(QString::fromStdString(ch.name)));
+            table->setItem(row, 2,
+                           new QTableWidgetItem(ch.rxWord == ch.txWord ? "Simple" : "Split"));
+            table->setItem(row, 3, new QTableWidgetItem(QString::number(
+                                              opendepot::WordToMHz(ch.rxWord), 'f', 5)));
+            table->setItem(row, 4, new QTableWidgetItem(QString::number(
+                                              opendepot::WordToMHz(ch.txWord), 'f', 5)));
+        }
+    }
+    if (table == zones_) {
+        const int h = table->horizontalHeader()->height() + table->rowCount() * 34 + 8;
+        table->setMinimumHeight(std::max(160, h));
+        table->setMaximumHeight(std::max(160, h));
+    }
+}
+
+void MainWindow::showZones() {
+    pages_->setCurrentIndex(kInfoPage);
+    tree_->setCurrentItem(treeRoot_);
+    if (infoScroll_ && zones_) infoScroll_->ensureWidgetVisible(zones_);
+}
+
+void MainWindow::showRecords() {
+    if (!have_) {
+        QMessageBox::information(this, "Records", "Open a codeplug first.");
+        return;
+    }
+    QDialog dlg(this);
+    dlg.setWindowTitle("Records");
+    dlg.resize(780, 540);
+    auto* lay = new QVBoxLayout(&dlg);
+    auto* table = new QTableWidget(static_cast<int>(cp_.records.size()), 4);
+    table->setHorizontalHeaderLabels({"Record ID", "Partition", "Size", "CRC"});
+    table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    table->verticalHeader()->setVisible(false);
+    table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    table->setSelectionBehavior(QAbstractItemView::SelectRows);
+    for (size_t i = 0; i < cp_.records.size(); ++i) {
+        const auto& r = cp_.records[i];
+        const int row = static_cast<int>(i);
+        table->setItem(row, 0,
+                       new QTableWidgetItem(QString("0x%1").arg(
+                           QString::number(r.id, 16).rightJustified(8, '0'))));
+        table->setItem(row, 1,
+                       new QTableWidgetItem(QString("0x%1").arg(
+                           QString::number(r.type, 16).rightJustified(4, '0'))));
+        table->setItem(row, 2, new QTableWidgetItem(QString::number(r.raw.size())));
+        table->setItem(row, 3, new QTableWidgetItem(r.verified ? "OK" : "BAD"));
+    }
+    lay->addWidget(table);
+    auto* close = new QPushButton("Close");
+    connect(close, &QPushButton::clicked, &dlg, &QDialog::accept);
+    lay->addWidget(close, 0, Qt::AlignRight);
+    dlg.exec();
 }
 
 void MainWindow::generateReport() {
@@ -285,7 +639,7 @@ void MainWindow::generateReport() {
     }
     report_->setPlainText(
         QString::fromStdString(opendepot::ServiceReportText(cp_, std::string())));
-    nav_->setCurrentRow(1);
+    pages_->setCurrentIndex(kReportPage);
 }
 
 void MainWindow::runDoctor() {
@@ -310,7 +664,7 @@ void MainWindow::runDoctor() {
             text += "- " + QString::fromStdString(s) + "\n";
     }
     doctor_->setPlainText(text);
-    nav_->setCurrentRow(2);
+    pages_->setCurrentIndex(kDoctorPage);
 }
 
 void MainWindow::compareCodeplug() {
@@ -327,9 +681,8 @@ void MainWindow::compareCodeplug() {
                               QString::fromStdString("Cannot load: " + other.error));
         return;
     }
-    diff_->setPlainText(
-        QString::fromStdString(opendepot::DiffCodeplugsText(cp_, other)));
-    nav_->setCurrentRow(3);
+    diff_->setPlainText(QString::fromStdString(opendepot::DiffCodeplugsText(cp_, other)));
+    pages_->setCurrentIndex(kDiffPage);
 }
 
 void MainWindow::readRadio() {
@@ -338,7 +691,7 @@ void MainWindow::readRadio() {
     job->isWrite = false;
     RadioJob* j = job.get();
     opendepot::Codeplug base = cp_;
-    const std::string port = port_->text().trimmed().toStdString();
+    const std::string port = port_ ? port_->text().trimmed().toStdString() : "COM20";
     appendRadioLog("Reading " + QString::fromStdString(port) + "...");
     showBusy("Reading radio...");
     j->thread = std::thread([j, base, port]() {
@@ -415,11 +768,12 @@ void MainWindow::writeRadio() {
                                  "\n\nWriting this codeplug could brick the radio.");
         return;
     }
+    const std::string port = port_ ? port_->text().trimmed().toStdString() : "COM20";
     const auto answer = QMessageBox::warning(
         this, "Write to radio",
         QString("Write %1 records to %2?\n\nThis can brick the radio. Keep a verified backup.")
             .arg(static_cast<qulonglong>(cp_.records.size()))
-            .arg(port_->text()),
+            .arg(QString::fromStdString(port)),
         QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
     if (answer != QMessageBox::Yes) return;
 
@@ -427,7 +781,6 @@ void MainWindow::writeRadio() {
     job->isWrite = true;
     RadioJob* j = job.get();
     opendepot::Codeplug base = cp_;
-    const std::string port = port_->text().trimmed().toStdString();
     appendRadioLog("Writing " + QString::fromStdString(port) + "...");
     showBusy("Writing radio...");
     j->thread = std::thread([j, base, port]() {
@@ -455,7 +808,6 @@ void MainWindow::pollRadio() {
     if (job_->ok && !job_->isWrite) {
         appendRadioLog("Read complete.");
         setCodeplug(std::move(job_->cp), "(radio)");
-        nav_->setCurrentRow(0);
     } else if (job_->ok && job_->isWrite) {
         appendRadioLog("Write complete. Read back to verify.");
     } else {

@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <QDateTime>
 #include <QMainWindow>
 #include <QString>
 
@@ -13,14 +14,17 @@
 #include "opendepot/core/adk.h"
 
 class QAction;
+class QGridLayout;
 class QLabel;
 class QLineEdit;
-class QListWidget;
 class QPlainTextEdit;
 class QProgressDialog;
+class QScrollArea;
 class QStackedWidget;
 class QTableWidget;
 class QTimer;
+class QTreeWidget;
+class QTreeWidgetItem;
 
 struct RadioJob {
     std::atomic<bool> done{false};
@@ -42,25 +46,34 @@ public:
     explicit MainWindow(QWidget* parent = nullptr);
     ~MainWindow() override;
 
+    void openFile(const QString& file);
+
 private slots:
     void openCodeplug();
     void saveCodeplugAs();
-    void refreshViews();
     void generateReport();
     void runDoctor();
     void compareCodeplug();
+    void showRecords();
+    void showZones();
     void readRadio();
     void writeRadio();
     void pollRadio();
     void about();
 
 private:
-    QWidget* buildDashboard();
-    QWidget* buildTextPage(QPlainTextEdit** out, const QString& button,
+    void setupMenu();
+    void setupUi();
+    void buildTree();
+    QWidget* buildRadioInfoPage();
+    QWidget* buildTextPage(const QString& title, QPlainTextEdit** out, const QString& button,
                            void (MainWindow::*handler)());
     QWidget* buildRadioPage();
-    void setupMenu();
+    QWidget* makeCard(const QString& caption, QLabel** value, const QString& initial = "-");
     void setCodeplug(opendepot::Codeplug cp, const QString& path);
+    void updateDashboard();
+    void fillZones(QTableWidget* table, bool groupRows);
+    void setModelStatus(const QString& text);
     void showBusy(const QString& text);
     void finishBusy();
     void appendRadioLog(const QString& line);
@@ -68,12 +81,23 @@ private:
     opendepot::Codeplug cp_;
     bool have_ = false;
     QString path_;
+    QDateTime openedAt_;
 
-    QListWidget* nav_ = nullptr;
+    QTreeWidget* tree_ = nullptr;
+    QTreeWidgetItem* treeRoot_ = nullptr;
     QStackedWidget* pages_ = nullptr;
-    QLabel* identity_ = nullptr;
+    QScrollArea* infoScroll_ = nullptr;
+    QLabel* subtitle_ = nullptr;
+    QLabel* serial_ = nullptr;
+    QLabel* model_ = nullptr;
     QLabel* flashcode_ = nullptr;
-    QLabel* counts_ = nullptr;
+    QLabel* headerVersion_ = nullptr;
+    QLabel* recordCount_ = nullptr;
+    QLabel* passcode_ = nullptr;
+    QLabel* codeplugFile_ = nullptr;
+    QLabel* modelStatus_ = nullptr;
+    QWidget* chips_ = nullptr;
+    QGridLayout* chipsLayout_ = nullptr;
     QTableWidget* zones_ = nullptr;
     QPlainTextEdit* report_ = nullptr;
     QPlainTextEdit* doctor_ = nullptr;
