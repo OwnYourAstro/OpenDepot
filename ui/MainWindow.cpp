@@ -1460,11 +1460,13 @@ void MainWindow::fillCpsTable(int tableIndex) {
                                 bind.bits == 32) {
                                 value = QString::number(
                                     opendepot::WordToMHz(static_cast<uint32_t>(raw)), 'f', 5);
+                            } else if (bind.bits > 32) {
+                                value = QString("0x%1").arg(
+                                    static_cast<qulonglong>(raw), 0, 16);
                             } else {
-                                value = bind.bits > 32
-                                            ? QString("0x%1").arg(
-                                                  static_cast<qulonglong>(raw), 0, 16)
-                                            : QString::number(static_cast<qulonglong>(raw));
+                                value = EnumText(name, raw);
+                                if (value.isEmpty())
+                                    value = QString::number(static_cast<qulonglong>(raw));
                             }
                         }
                     }
@@ -1522,12 +1524,15 @@ void MainWindow::fillCpsTable(int tableIndex) {
                         node->payload.data(), node->payload.size(),
                         static_cast<uint16_t>(base + bind.off), bind.bits, bind.msb);
                     const QString name = QString::fromUtf8(column.name);
-                    cpsGrid_->setItem(
-                        row, int(c),
-                        new QTableWidgetItem(
-                            name.contains("Frequency", Qt::CaseInsensitive) && bind.bits == 32
-                                ? QString::number(opendepot::WordToMHz(uint32_t(raw)), 'f', 5)
-                                : QString::number(static_cast<qulonglong>(raw))));
+                    QString value;
+                    if (name.contains("Frequency", Qt::CaseInsensitive) && bind.bits == 32)
+                        value = QString::number(opendepot::WordToMHz(uint32_t(raw)), 'f', 5);
+                    else {
+                        value = EnumText(name, raw);
+                        if (value.isEmpty())
+                            value = QString::number(static_cast<qulonglong>(raw));
+                    }
+                    cpsGrid_->setItem(row, int(c), new QTableWidgetItem(value));
                 }
             }
             info += QString(" - %1 range(s)").arg(cpsGrid_->rowCount());
@@ -1580,7 +1585,9 @@ void MainWindow::fillCpsTable(int tableIndex) {
                         text.push_back(char(node->payload[i]));
                     value = QString::fromStdString(text);
                 } else {
-                    value = QString::number(static_cast<qulonglong>(raw));
+                    value = EnumText(name, raw);
+                    if (value.isEmpty())
+                        value = QString::number(static_cast<qulonglong>(raw));
                 }
                 cpsGrid_->setItem(row, int(c), new QTableWidgetItem(value));
             }
@@ -1605,12 +1612,16 @@ void MainWindow::fillCpsTable(int tableIndex) {
                     continue;
                 const uint64_t raw = opendepot::ReadFieldBits(
                     node->payload.data(), node->payload.size(), bind.off, bind.bits, bind.msb);
-                cpsGrid_->setItem(
-                    row, int(c),
-                    new QTableWidgetItem(bind.bits > 32
-                                             ? QString("0x%1").arg(
-                                                   static_cast<qulonglong>(raw), 0, 16)
-                                             : QString::number(static_cast<qulonglong>(raw))));
+                const QString name = QString::fromUtf8(column.name);
+                QString value;
+                if (bind.bits > 32) {
+                    value = QString("0x%1").arg(static_cast<qulonglong>(raw), 0, 16);
+                } else {
+                    value = EnumText(name, raw);
+                    if (value.isEmpty())
+                        value = QString::number(static_cast<qulonglong>(raw));
+                }
+                cpsGrid_->setItem(row, int(c), new QTableWidgetItem(value));
             }
         }
         info += QString(" - %1 row(s)").arg(cpsGrid_->rowCount());
@@ -1628,12 +1639,15 @@ void MainWindow::fillCpsTable(int tableIndex) {
                 const uint64_t raw = opendepot::ReadFieldBits(
                     node.payload.data(), node.payload.size(), bind.off, bind.bits, bind.msb);
                 const QString name = QString::fromUtf8(column.name);
-                cpsGrid_->setItem(
-                    row, int(c),
-                    new QTableWidgetItem(
-                        name.contains("Frequency", Qt::CaseInsensitive) && bind.bits == 32
-                            ? QString::number(opendepot::WordToMHz(uint32_t(raw)), 'f', 5)
-                            : QString::number(static_cast<qulonglong>(raw))));
+                QString value;
+                if (name.contains("Frequency", Qt::CaseInsensitive) && bind.bits == 32)
+                    value = QString::number(opendepot::WordToMHz(uint32_t(raw)), 'f', 5);
+                else {
+                    value = EnumText(name, raw);
+                    if (value.isEmpty())
+                        value = QString::number(static_cast<qulonglong>(raw));
+                }
+                cpsGrid_->setItem(row, int(c), new QTableWidgetItem(value));
             }
         }
         info += QString(" - %1 talkgroup row(s)").arg(cpsGrid_->rowCount());
@@ -1688,7 +1702,9 @@ void MainWindow::fillCpsTable(int tableIndex) {
                 } else if (bind.bits > 32) {
                     value = QString("0x%1").arg(static_cast<qulonglong>(raw), 0, 16);
                 } else {
-                    value = QString::number(static_cast<qulonglong>(raw));
+                    value = EnumText(name, raw);
+                    if (value.isEmpty())
+                        value = QString::number(static_cast<qulonglong>(raw));
                 }
                 cpsGrid_->setItem(row, int(c), new QTableWidgetItem(value));
             }
