@@ -3,6 +3,7 @@
 
 #include <QApplication>
 #include <QFile>
+#include <QIcon>
 
 #include "MainWindow.h"
 
@@ -10,6 +11,7 @@ int main(int argc, char** argv) {
     QApplication app(argc, argv);
     app.setApplicationName("OpenDepot");
     app.setOrganizationName("OpenDepot");
+    app.setWindowIcon(QIcon(":/icon.ico"));
 
     QFile theme(":/theme.qss");
     if (theme.open(QIODevice::ReadOnly))

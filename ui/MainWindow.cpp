@@ -42,10 +42,11 @@
 
 namespace {
 constexpr int kInfoPage = 0;
-constexpr int kReportPage = 1;
-constexpr int kDoctorPage = 2;
-constexpr int kDiffPage = 3;
-constexpr int kRadioPage = 4;
+constexpr int kZonesPage = 1;
+constexpr int kReportPage = 2;
+constexpr int kDoctorPage = 3;
+constexpr int kDiffPage = 4;
+constexpr int kRadioPage = 5;
 }  // namespace
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
@@ -155,6 +156,7 @@ void MainWindow::setupUi() {
 
     pages_ = new QStackedWidget;
     pages_->addWidget(buildRadioInfoPage());
+    pages_->addWidget(buildZonesPage());
     pages_->addWidget(buildTextPage("Service Report", &report_, "Generate report",
                                     &MainWindow::generateReport));
     pages_->addWidget(buildTextPage("Codeplug Doctor", &doctor_, "Run doctor",
@@ -200,8 +202,8 @@ void MainWindow::buildTree() {
     conv->setData(0, Qt::UserRole, kInfoPage);
     auto* zonesIt = new QTreeWidgetItem(conv, QStringList{"Zones & Channels"});
     zonesIt->setIcon(0, icon(QStyle::SP_FileIcon));
-    zonesIt->setData(0, Qt::UserRole, kInfoPage);
-    zonesIt->setData(0, Qt::UserRole + 1, "zones");
+    zonesIt->setData(0, Qt::UserRole, kZonesPage);
+    zonesItem_ = zonesIt;
 
     for (const char* n : {"ASTRO Systems", "Trunking", "Scan"}) {
         auto* it = new QTreeWidgetItem(treeRoot_, QStringList{QString::fromLatin1(n)});
@@ -231,10 +233,6 @@ void MainWindow::buildTree() {
     connect(tree_, &QTreeWidget::currentItemChanged, this,
             [this](QTreeWidgetItem* cur, QTreeWidgetItem*) {
                 if (!cur) return;
-                if (cur->data(0, Qt::UserRole + 1).toString() == "zones") {
-                    showZones();
-                    return;
-                }
                 pages_->setCurrentIndex(cur->data(0, Qt::UserRole).toInt());
             });
 }
@@ -336,10 +334,21 @@ QWidget* MainWindow::buildRadioInfoPage() {
     chipsLayout_->setHorizontalSpacing(8);
     chipsLayout_->setVerticalSpacing(8);
     lay->addWidget(chips_);
+    lay->addStretch(1);
 
-    auto* zoneTitle = new QLabel("Zones and Channels");
-    zoneTitle->setObjectName("sectionTitle");
-    lay->addWidget(zoneTitle);
+    scroll->setWidget(content);
+    return scroll;
+}
+
+QWidget* MainWindow::buildZonesPage() {
+    auto* page = new QWidget;
+    auto* lay = new QVBoxLayout(page);
+    lay->setContentsMargins(32, 26, 32, 32);
+    lay->setSpacing(12);
+    auto* title = new QLabel("Zones and Channels");
+    title->setObjectName("pageTitle");
+    lay->addWidget(title);
+
     zones_ = new QTableWidget(0, 5);
     zones_->setHorizontalHeaderLabels({"#", "Channel", "Mode", "RX MHz", "TX MHz"});
     zones_->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
@@ -349,11 +358,8 @@ QWidget* MainWindow::buildRadioInfoPage() {
     zones_->setEditTriggers(QAbstractItemView::NoEditTriggers);
     zones_->setSelectionBehavior(QAbstractItemView::SelectRows);
     zones_->setShowGrid(false);
-    lay->addWidget(zones_);
-    lay->addStretch(1);
-
-    scroll->setWidget(content);
-    return scroll;
+    lay->addWidget(zones_, 1);
+    return page;
 }
 
 QWidget* MainWindow::buildTextPage(const QString& titleText, QPlainTextEdit** out,
@@ -585,17 +591,11 @@ void MainWindow::fillZones(QTableWidget* table, bool groupRows) {
                                               opendepot::WordToMHz(ch.txWord), 'f', 5)));
         }
     }
-    if (table == zones_) {
-        const int h = table->horizontalHeader()->height() + table->rowCount() * 34 + 8;
-        table->setMinimumHeight(std::max(160, h));
-        table->setMaximumHeight(std::max(160, h));
-    }
 }
 
 void MainWindow::showZones() {
-    pages_->setCurrentIndex(kInfoPage);
-    tree_->setCurrentItem(treeRoot_);
-    if (infoScroll_ && zones_) infoScroll_->ensureWidgetVisible(zones_);
+    if (zonesItem_) tree_->setCurrentItem(zonesItem_);
+    pages_->setCurrentIndex(kZonesPage);
 }
 
 void MainWindow::showRecords() {

@@ -26,5 +26,10 @@ qt_add_executable(OpenDepot WIN32
     ui/MainWindow.h
     ui/resources.qrc
 )
+if(WIN32)
+    file(TO_CMAKE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/icon.ico" ICON_PATH)
+    configure_file(ui/app.rc.in "${CMAKE_CURRENT_BINARY_DIR}/app.rc" @ONLY)
+    target_sources(OpenDepot PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/app.rc")
+endif()
 target_include_directories(OpenDepot PRIVATE ui)
 target_link_libraries(OpenDepot PRIVATE Qt6::Widgets opendepot_core)

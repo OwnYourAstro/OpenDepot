@@ -66,6 +66,7 @@ private:
     void setupUi();
     void buildTree();
     QWidget* buildRadioInfoPage();
+    QWidget* buildZonesPage();
     QWidget* buildTextPage(const QString& title, QPlainTextEdit** out, const QString& button,
                            void (MainWindow::*handler)());
     QWidget* buildRadioPage();
@@ -85,6 +86,7 @@ private:
 
     QTreeWidget* tree_ = nullptr;
     QTreeWidgetItem* treeRoot_ = nullptr;
+    QTreeWidgetItem* zonesItem_ = nullptr;
     QStackedWidget* pages_ = nullptr;
     QScrollArea* infoScroll_ = nullptr;
     QLabel* subtitle_ = nullptr;
