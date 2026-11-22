@@ -759,7 +759,61 @@ QWidget* MainWindow::buildRadioWidePage() {
     for (int i = 0; i < 6; ++i) {
         auto* w = new QWidget;
         auto* wl = new QVBoxLayout(w);
-        if (QString::fromLatin1(generalTabs[i]) == "Home Mode") {
+        if (QString::fromLatin1(generalTabs[i]) == "Emergency") {
+            auto* form = new QGridLayout;
+            form->setHorizontalSpacing(18);
+            form->setVerticalSpacing(8);
+            int row = 0;
+            auto addSpin = [&](const char* label, const char* field, int maximum) {
+                form->addWidget(new QLabel(QString::fromLatin1(label)), row, 0);
+                auto* spin = new QSpinBox;
+                spin->setRange(0, maximum);
+                form->addWidget(spin, row++, 1);
+                bindField(field, spin);
+            };
+            auto addCheck = [&](const char* field) {
+                auto* check = new QCheckBox(QString::fromLatin1(field));
+                form->addWidget(check, row++, 0, 1, 2);
+                bindField(field, check);
+            };
+            addCheck("Emergency Call De-key Sidetone");
+            addCheck("Emergency Acknowledgement");
+            addSpin("Emergency Steering Zone:", "Emergency Steering Zone", 255);
+            addSpin("Emergency Steering Channel:", "Emergency Steering Channel", 65535);
+            addSpin("Short Keypress Duration for Emergency:", "Short Keypress Duration for Emergency", 15);
+            addSpin("Long Keypress Duration for Emergency:", "Long Keypress Duration for Emergency", 255);
+            addSpin("Emergency Alarm Display Time:", "Emergency Alarm Receive Display Time", 255);
+            addSpin("Emergency Alarm Retry Ignore Time:", "Emergency Alarm Receive Retry Ignore Time",
+                    255);
+            addSpin("Emergency Alarm Retry Rate:", "Emergency Alarm Retry Rate", 255);
+            wl->addLayout(form);
+        } else if (QString::fromLatin1(generalTabs[i]) == "Alert Tones") {
+            auto* form = new QGridLayout;
+            form->setHorizontalSpacing(18);
+            form->setVerticalSpacing(8);
+            int row = 0;
+            auto addSpin = [&](const char* label, const char* field, int maximum) {
+                form->addWidget(new QLabel(QString::fromLatin1(label)), row, 0);
+                auto* spin = new QSpinBox;
+                spin->setRange(0, maximum);
+                form->addWidget(spin, row++, 1);
+                bindField(field, spin);
+            };
+            auto addCheck = [&](const char* field) {
+                auto* check = new QCheckBox(QString::fromLatin1(field));
+                form->addWidget(check, row++, 0, 1, 2);
+                bindField(field, check);
+            };
+            addCheck("Alert Tones");
+            addCheck("Defeat All Tones When Muted");
+            addCheck("Fixed Alert Tone Enable");
+            addCheck("Call Alert Tone Auto Reset");
+            addSpin("Minimum Alert Tone Volume:", "Minimum Alert Tone Volume", 255);
+            addSpin("Maximum Alert Tone Volume:", "Maximum Alert Tone Volume", 255);
+            addSpin("Alert Tone Volume Offset:", "Alert Tone Volume Offset", 255);
+            addSpin("Fixed Alert Tone Volume Setting:", "Fixed Alert Tone Volume Setting", 255);
+            wl->addLayout(form);
+        } else if (QString::fromLatin1(generalTabs[i]) == "Home Mode") {
             auto* form = new QGridLayout;
             form->setHorizontalSpacing(18);
             form->setVerticalSpacing(8);
