@@ -603,9 +603,9 @@ QWidget* MainWindow::buildRadioWidePage() {
     title->setObjectName("pageTitle");
     lay->addWidget(title);
     auto* banner = new QLabel(
-        "Portable Depot Radio Wide layout. Maximum Channels is mapped; the remaining controls are "
-        "shown for parity and disabled until their record offsets are verified. Use \"Raw Radio Wide "
-        "records\" for every field.");
+        "Radio Wide fields decoded from codeplug records 0x000A and 0x000C. General, Emergency, "
+        "Alert Tones, Time-Out Timers, Alarm, and Home Mode controls are live. Use \"Named Fields\" "
+        "for every named field or \"Raw Radio Wide records\" for bytes.");
     banner->setObjectName("muted");
     banner->setWordWrap(true);
     lay->addWidget(banner);
