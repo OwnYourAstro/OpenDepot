@@ -78,6 +78,30 @@ constexpr int kRoleZone = Qt::UserRole + 2;
 constexpr int kRoleChannel = Qt::UserRole + 3;
 constexpr int kRoleRecordId = Qt::UserRole + 4;
 
+QString EnumText(const QString& field, uint64_t raw) {
+    if (field == "Out of Range Indicator" || field == "Imbalanced Coverage Indicator" ||
+        field == "System Registration Indicator") {
+        static const char* values[] = {"No Indication", "Alert Only", "Display Only",
+                                       "Alert & Display"};
+        return raw < 4 ? QString::fromLatin1(values[raw]) : QString();
+    }
+    if (field == "Time format") {
+        static const char* values[] = {"12 Hour", "24 Hour", "12 Hour with Seconds",
+                                       "24 Hour with Seconds"};
+        return raw < 4 ? QString::fromLatin1(values[raw]) : QString();
+    }
+    if (field == "Date Format") {
+        static const char* values[] = {"MM/DD/YYYY", "DD/MM/YYYY", "YYYY/MM/DD", "MM/DD/YY"};
+        return raw < 4 ? QString::fromLatin1(values[raw]) : QString();
+    }
+    if (field == "Channel Announcement Priority") return raw ? "High" : "Normal";
+    if (field == "Key Type") {
+        static const char* values[] = {"None", "Advanced System Key", "Advanced WACN Key"};
+        return raw < 3 ? QString::fromLatin1(values[raw]) : QString();
+    }
+    return {};
+}
+
 QString HexBytes(const std::vector<uint8_t>& p) {
     QString s;
     s.reserve(int(p.size()) * 3);
@@ -1101,9 +1125,13 @@ void MainWindow::refreshRadioWidePage() {
                 }
                 value = QString::fromLatin1(text.c_str());
             }
-            if (value.isEmpty())
-                value = field.bits > 32 ? QString("0x%1").arg(static_cast<qulonglong>(raw), 0, 16)
-                                        : QString::number(static_cast<qulonglong>(raw));
+            if (value.isEmpty()) {
+                value = EnumText(name, raw);
+                if (value.isEmpty())
+                    value = field.bits > 32
+                                ? QString("0x%1").arg(static_cast<qulonglong>(raw), 0, 16)
+                                : QString::number(static_cast<qulonglong>(raw));
+            }
             const int row = table->rowCount();
             table->insertRow(row);
             table->setItem(row, 0, new QTableWidgetItem(name));
@@ -1147,9 +1175,12 @@ void MainWindow::refreshRadioWidePage() {
             const uint64_t bits =
                 opendepot::ReadFieldBits(payload.data(), payload.size(), field.off, field.bits,
                                          field.msb);
-            valueText = field.bits > 32
-                            ? QString("0x%1").arg(static_cast<qulonglong>(bits), 0, 16)
-                            : QString::number(static_cast<qulonglong>(bits));
+            const QString label = EnumText(field.name ? field.name : "", bits);
+            valueText = !label.isEmpty()
+                            ? label
+                            : field.bits > 32
+                                  ? QString("0x%1").arg(static_cast<qulonglong>(bits), 0, 16)
+                                  : QString::number(static_cast<qulonglong>(bits));
         }
         rwNamedFields_->setItem(row, 5, new QTableWidgetItem(valueText));
     }
@@ -2241,9 +2272,12 @@ void MainWindow::refreshSectionRecord(int row) {
                 const uint64_t value =
                     opendepot::ReadFieldBits(n->payload.data(), n->payload.size(), field.off,
                                              field.bits, field.msb);
-                valueText = field.bits > 32
-                                ? QString("0x%1").arg(static_cast<qulonglong>(value), 0, 16)
-                                : QString::number(static_cast<qulonglong>(value));
+                const QString label = EnumText(field.name ? field.name : "", value);
+                valueText = !label.isEmpty()
+                                ? label
+                                : field.bits > 32
+                                      ? QString("0x%1").arg(static_cast<qulonglong>(value), 0, 16)
+                                      : QString::number(static_cast<qulonglong>(value));
             }
             sectionNamed_->setItem(rowIdx, 5, new QTableWidgetItem(valueText));
         };
