@@ -2764,7 +2764,10 @@ void MainWindow::createCodeplug() {
         const QSignalBlocker blockSerial(serialEdit);
         const QSignalBlocker blockFlash(flashEdit);
         modelEdit->setCurrentText(QString::fromStdString(profile.header.model));
-        serialEdit->setText(QString::fromStdString(profile.header.serial));
+        if (serialEdit->text().trimmed().isEmpty() &&
+            !profile.header.serial.empty()) {
+            serialEdit->setText(QString::fromStdString(profile.header.serial));
+        }
         const QString fc = QString::fromStdString(opendepot::GetFlashcode(profile));
         baseFlash = fc;
         flashEdit->setText(fc);
