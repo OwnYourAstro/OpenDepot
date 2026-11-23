@@ -67,6 +67,7 @@
 #include <vector>
 
 #include "opendepot/core/field_catalog.h"
+#include "opendepot/core/depot_profiles.h"
 #include "opendepot/core/model.h"
 #include "opendepot/core/radio.h"
 
@@ -2316,6 +2317,21 @@ void MainWindow::createCodeplug() {
     templateRow->addWidget(browseTemplate);
     form->addRow("Template", templateUrl);
 
+    QString profileDb;
+    for (const char* relative : {"data/depot_profiles.bin", "../../../data/depot_profiles.bin",
+                                 "../../data/depot_profiles.bin"}) {
+        const QString candidate =
+            QDir(QApplication::applicationDirPath()).filePath(QString::fromLatin1(relative));
+        if (QFileInfo::exists(candidate)) {
+            profileDb = candidate;
+            break;
+        }
+    }
+    std::vector<opendepot::DepotProfileInfo> depotProfiles;
+    std::string profileErr;
+    if (!profileDb.isEmpty())
+        opendepot::ListDepotProfiles(profileDb.toStdString(), depotProfiles, profileErr);
+
     auto* bandEdit = new QComboBox;
     bandEdit->addItems({"800 MHz", "900 MHz", "UHF", "VHF", "700/800 MHz"});
     bandEdit->setCurrentText("800 MHz");
@@ -2325,15 +2341,97 @@ void MainWindow::createCodeplug() {
     radioEdit->setCurrentText("XTS2500");
     auto* typeEdit = new QComboBox;
     typeEdit->addItems({"Model III", "Model II", "Model I"});
-    auto* modelEdit = new QLineEdit;
-    modelEdit->setText(have_ ? QString::fromStdString(cp_.header.model)
-                             : QString::fromStdString(opendepot::BuiltinFirstModel()));
+    auto* modelEdit = new QComboBox;
+    for (const char* model : {"H46UCF9PW6BN", "H46WCF9PW6BN", "H46QDD9PW5BN",
+                              "H46KDD9PW5BN", "H18UCC9PW5AN",
+                              "H66UCC9PW5AN", "H67UCC9PW5AN", "H10SDD9PW6AN",
+                              "H79KDC9PW5AN", "H18KCN9PW9AN", "M20QSS9PW1AN"})
+        modelEdit->addItem(QString::fromLatin1(model));
+    for (const auto& profile : depotProfiles) {
+        const QString model = QString::fromStdString(profile.model);
+        if (modelEdit->findText(model) < 0) modelEdit->addItem(model);
+    }
+    const QString initialModel =
+        have_ ? QString::fromStdString(cp_.header.model)
+              : QString::fromStdString(opendepot::BuiltinFirstModel());
+    if (modelEdit->findText(initialModel) < 0) modelEdit->addItem(initialModel);
+    modelEdit->setCurrentText(initialModel);
     auto* serialEdit = new QLineEdit("123ABC4567");
     serialEdit->setMaxLength(16);
     auto* flashEdit = new QLineEdit(
         have_ ? QString::fromStdString(opendepot::GetFlashcode(cp_))
               : QStringLiteral("500018-000488-0"));
     QString baseFlash = flashEdit->text();
+    auto syncHardwareModel = [&] {
+        const QString band = bandEdit->currentText();
+        const QString radio = radioEdit->currentText();
+        const QString type = typeEdit->currentText();
+        struct Choice {
+            const char* band;
+            const char* radio;
+            const char* type;
+            const char* model;
+        };
+        static const Choice choices[] = {
+            {"800 MHz", "XTS2500", "Model III", "H46UCF9PW6BN"},
+            {"900 MHz", "XTS2500", "Model III", "H46WCF9PW6BN"},
+            {"UHF", "XTS2500", "Model III", "H46QDD9PW5BN"},
+            {"VHF", "XTS2500", "Model III", "H46KDD9PW5BN"},
+            {"800 MHz", "XTS2500", "Model II", "H46UCF9PW6AN"},
+            {"900 MHz", "XTS2500", "Model II", "H46WCF9PW6AN"},
+            {"UHF", "XTS2500", "Model II", "H46QDD9PW5AN"},
+            {"VHF", "XTS2500", "Model II", "H46KDD9PW5AN"},
+            {"800 MHz", "XTS5000", "Model III", "H18UCC9PW5AN"},
+            {"UHF", "XTS4000", "Model III", "H18KCN9PW9AN"},
+            {"800 MHz", "XTS1500", "Model III", "H66UCC9PW5AN"},
+            {"800 MHz", "MT1500", "Model III", "H67UCC9PW5AN"},
+            {"800 MHz", "SSE5000", "Model III", "H10SDD9PW6AN"},
+            {"800 MHz", "PR1500", "Model III", "H79KDC9PW5AN"},
+            {"UHF", "XTL5000", "Model III", "M20QSS9PW1AN"},
+        };
+        QString model;
+        if (radio == "XTS2500") {
+            if (band == "900 MHz")
+                model = "H46WCF9PW6";
+            else if (band == "UHF")
+                model = "H46QDD9PW5";
+            else if (band == "VHF")
+                model = "H46KDD9PW5";
+            else
+                model = "H46UCF9PW6";
+            model += (type == "Model II") ? "AN" : "BN";
+        } else if (radio == "XTS5000") {
+            if (band == "UHF")
+                model = "H18QDH9PW7AN";
+            else if (band == "VHF")
+                model = "H18KCN9PW9AN";
+            else
+                model = "H18UCC9PW5AN";
+        } else if (radio == "XTS1500") {
+            model = "H66UCC9PW5AN";
+        } else if (radio == "XTS4000") {
+            model = "H18KCN9PW9AN";
+        } else if (radio == "MT1500") {
+            model = "H67UCC9PW5AN";
+        } else if (radio == "PR1500") {
+            model = "H79KDC9PW5AN";
+        } else if (radio == "SSE5000") {
+            model = "H10SDD9PW6AN";
+        } else if (radio == "XTL5000") {
+            model = "M20QSS9PW1AN";
+        }
+        {
+            const QSignalBlocker block(modelEdit);
+            modelEdit->clear();
+            for (const auto& choice : choices) {
+                if (band == choice.band && radio == choice.radio && type == choice.type &&
+                    modelEdit->findText(QString::fromLatin1(choice.model)) < 0)
+                    modelEdit->addItem(QString::fromLatin1(choice.model));
+            }
+            if (!model.isEmpty() && modelEdit->findText(model) >= 0)
+                modelEdit->setCurrentText(model);
+        }
+    };
     auto joinList = [](const std::vector<std::string>& values) {
         QStringList list;
         for (const auto& value : values) list << QString::fromStdString(value);
@@ -2349,13 +2447,17 @@ void MainWindow::createCodeplug() {
         {"Analog Cnv Data", "Q811"},
     };
     for (const auto& package : opendepot::PackagesForModel(
-             modelEdit->text().toStdString())) {
+             modelEdit->currentText().toStdString())) {
         packagesCombo->addItem(QString::fromStdString(package));
         for (const auto& mapping : packageCodes)
             if (package == mapping.first)
                 packagesCombo->setItemData(packagesCombo->count() - 1,
                                            QString::fromLatin1(mapping.second),
                                            Qt::UserRole);
+    }
+    for (const auto& profile : depotProfiles) {
+        const QString package = QString::fromStdString(profile.package);
+        if (packagesCombo->findText(package) < 0) packagesCombo->addItem(package);
     }
     form->addRow("Band", bandEdit);
     form->addRow("Radio", radioEdit);
@@ -2414,7 +2516,7 @@ void MainWindow::createCodeplug() {
             const int value = digits.indexOf(hex[nibble]);
             if (value >= 0) hex[nibble] = digits[value | (1 << bit)];
         };
-        const auto addonList = opendepot::AddonsForModel(modelEdit->text().toStdString());
+        const auto addonList = opendepot::AddonsForModel(modelEdit->currentText().toStdString());
         for (const auto& option : platform->options) {
             if (std::find(addonList.begin(), addonList.end(), option.code) != addonList.end())
                 clearBit(option.nibble, option.bit);
@@ -2457,7 +2559,7 @@ void MainWindow::createCodeplug() {
         const auto* platform =
             opendepot::FindFlashcodePlatform(opendepot::PlatformForRadio(
                 radioEdit->currentText().toStdString()));
-        const auto codes = opendepot::AddonsForModel(modelEdit->text().toStdString());
+        const auto codes = opendepot::AddonsForModel(modelEdit->currentText().toStdString());
         for (const auto& code : codes) {
             QString label = QString::fromStdString(opendepot::OptionLabel(code));
             if (platform) {
@@ -2512,12 +2614,37 @@ void MainWindow::createCodeplug() {
         refreshFlashcode();
     };
 
+    auto applyProfile = [&] {
+        if (profileDb.isEmpty() || packagesCombo->currentText() == "Use template FLASHcode")
+            return;
+        opendepot::Codeplug profile;
+        std::string err;
+        if (!opendepot::LoadDepotProfile(profileDb.toStdString(),
+                                         modelEdit->currentText().toStdString(),
+                                         packagesCombo->currentText().toStdString(), profile,
+                                         err))
+            return;
+        const QSignalBlocker blockModel(modelEdit);
+        const QSignalBlocker blockSerial(serialEdit);
+        const QSignalBlocker blockFlash(flashEdit);
+        modelEdit->setCurrentText(QString::fromStdString(profile.header.model));
+        serialEdit->setText(QString::fromStdString(profile.header.serial));
+        const QString fc = QString::fromStdString(opendepot::GetFlashcode(profile));
+        baseFlash = fc;
+        flashEdit->setText(fc);
+        addonsList->clear();
+        populateAddons();
+        syncAddonsFromFlashcode();
+    };
+
     connect(addonsList, &QListWidget::itemChanged, &dlg,
             [&](QListWidgetItem*) { refreshFlashcode(); });
     connect(radioEdit, &QComboBox::currentTextChanged, &dlg,
-            [&](const QString&) { populateAddons(); });
+            [&](const QString&) { syncHardwareModel(); populateAddons(); });
     connect(packagesCombo, &QComboBox::currentTextChanged, &dlg,
             [&](const QString&) { refreshFlashcode(); });
+    connect(packagesCombo, &QComboBox::currentTextChanged, &dlg,
+            [&](const QString&) { applyProfile(); });
     connect(templateCombo, &QComboBox::currentIndexChanged, &dlg, [&](int) {
         const QString path = templateCombo->currentData().toString();
         if (path.isEmpty()) return;
@@ -2579,7 +2706,8 @@ void MainWindow::createCodeplug() {
                 if (bandFound) break;
             }
         }
-        modelEdit->setText(model);
+        if (modelEdit->findText(model) < 0) modelEdit->addItem(model);
+        modelEdit->setCurrentText(model);
         serialEdit->setText(QString::fromStdString(t.header.serial));
         radioEdit->setCurrentText(radio);
         bandEdit->setCurrentText(band);
@@ -2593,21 +2721,13 @@ void MainWindow::createCodeplug() {
         populateAddons();
         syncAddonsFromFlashcode();
     });
+    connect(bandEdit, &QComboBox::currentTextChanged, &dlg,
+            [&](const QString&) { syncHardwareModel(); });
+    connect(typeEdit, &QComboBox::currentTextChanged, &dlg,
+            [&](const QString&) { syncHardwareModel(); });
     connect(flashEdit, &QLineEdit::textEdited, &dlg, [&](const QString& text) {
         baseFlash = text;
         refreshFlashcode();
-    });
-    connect(modelEdit, &QLineEdit::editingFinished, &dlg, [&] {
-        const std::string model = modelEdit->text().trimmed().toStdString();
-        for (const auto& info : opendepot::ModelCatalog()) {
-            if (model == info.model) {
-                bandEdit->setCurrentText(QString::fromLatin1(info.band));
-                radioEdit->setCurrentText(QString::fromLatin1(info.radio));
-                typeEdit->setCurrentText(QString::fromLatin1(info.type));
-                break;
-            }
-        }
-        populateAddons();
     });
     populateAddons();
     addonsLayout->addWidget(addonsList);
@@ -2622,7 +2742,7 @@ void MainWindow::createCodeplug() {
 
     if (dlg.exec() != QDialog::Accepted) return;
 
-    const std::string model = modelEdit->text().trimmed().toStdString();
+    const std::string model = modelEdit->currentText().trimmed().toStdString();
     const std::string serial = serialEdit->text().trimmed().toStdString();
     if (model.empty() || serial.empty()) {
         QMessageBox::warning(this, "Create codeplug", "Model and serial are required.");
@@ -2637,6 +2757,15 @@ void MainWindow::createCodeplug() {
                                      templ)) {
             QMessageBox::critical(this, "Create codeplug",
                                   QString::fromStdString("Cannot load template: " + templ.error));
+            return;
+        }
+    } else if (!profileDb.isEmpty() &&
+               packagesCombo->currentText() != "Use template FLASHcode") {
+        if (!opendepot::LoadDepotProfile(profileDb.toStdString(), model,
+                                         packagesCombo->currentText().toStdString(), templ,
+                                         err)) {
+            QMessageBox::critical(this, "Create codeplug",
+                                  QString::fromStdString("No native profile: " + err));
             return;
         }
     } else if (!opendepot::BuiltinTemplate(model, templ, err)) {

@@ -42,3 +42,9 @@ if(WIN32)
 endif()
 target_include_directories(OpenDepot PRIVATE ui)
 target_link_libraries(OpenDepot PRIVATE Qt6::Widgets opendepot_core)
+add_custom_command(TARGET OpenDepot POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:OpenDepot>/data"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_CURRENT_SOURCE_DIR}/data/depot_profiles.bin"
+        "$<TARGET_FILE_DIR:OpenDepot>/data/depot_profiles.bin"
+)
