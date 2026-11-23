@@ -63,10 +63,13 @@
 #include <algorithm>
 #include <cmath>
 #include <filesystem>
+#include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "opendepot/core/field_catalog.h"
+#include "opendepot/core/block_map.h"
 #include "opendepot/core/depot_profiles.h"
 #include "opendepot/core/model.h"
 #include "opendepot/core/radio.h"
@@ -82,6 +85,9 @@ constexpr int kSectionPage = 6;
 constexpr int kRadioWidePage = 7;
 constexpr int kCatalogPage = 8;
 constexpr int kCpsTablesPage = 9;
+constexpr int kBlocksPage = 10;
+constexpr int kCpsEditorPage = 11;
+constexpr int kCpsPanelsPage = 12;
 constexpr int kRolePage = Qt::UserRole;
 constexpr int kRoleSection = Qt::UserRole + 1;
 constexpr int kRoleZone = Qt::UserRole + 2;
@@ -352,6 +358,9 @@ QIcon TreeIcon(const QString& text, bool isGroup) {
         {"Diff", Glyph::Diff, "#a78bfa"},
         {"Radio", Glyph::Radio, "#60a5fa"},
         {"CPS Tables", Glyph::Table, "#38bdf8"},
+        {"CPS Blocks", Glyph::Table, "#38bdf8"},
+        {"CPS Editor", Glyph::Sliders, "#38bdf8"},
+        {"CPS Panels", Glyph::List, "#38bdf8"},
         {"Field Catalog", Glyph::Grid, "#38bdf8"},
     };
     for (const auto& spec : specs) {
@@ -364,9 +373,10 @@ QIcon TreeIcon(const QString& text, bool isGroup) {
 
 bool WriteFieldBits(std::vector<uint8_t>& data, uint16_t off, uint16_t bits, uint8_t msb,
                     uint64_t value) {
-    if (bits == 0 || bits > 32) return false;
-    const size_t pos = size_t(off) * 8 + (7 - msb);
-    if (pos + bits > data.size() * 8) return false;
+    if (bits == 0 || bits > 32 || msb > 7) return false;
+    const size_t pos = size_t(off) * 8 + size_t(7 - msb);
+    const size_t need = pos + size_t(bits);
+    if (need < pos || need > data.size() * 8) return false;
     for (uint16_t i = 0; i < bits; ++i) {
         const size_t bit = pos + i;
         const bool set = (value >> (bits - 1 - i)) & 1;
@@ -609,6 +619,9 @@ void MainWindow::setupUi() {
     pages_->addWidget(buildRadioWidePage());
     pages_->addWidget(buildFieldCatalogPage());
     pages_->addWidget(buildCpsTablesPage());
+    pages_->addWidget(buildBlocksPage());
+    pages_->addWidget(buildCpsEditorPage());
+    pages_->addWidget(buildCpsPanelsPage());
     pages_->setCurrentIndex(kInfoPage);
     root->addWidget(pages_, 1);
 
@@ -639,6 +652,7 @@ void MainWindow::buildTree() {
                                   {"Diff", kDiffPage},
                                   {"Radio", kRadioPage},
                                   {"CPS Tables", kCpsTablesPage},
+                                  {"CPS Blocks", kBlocksPage},
                                   {"Field Catalog", kCatalogPage}};
     for (const auto& t : toolItems) {
         auto* it = new QTreeWidgetItem(tools, QStringList{QString::fromLatin1(t.name)});
@@ -654,11 +668,38 @@ void MainWindow::buildTree() {
     });
 }
 
+void MainWindow::selectSectionByName(const QString& name) {
+    if (!tree_) return;
+    QList<QTreeWidgetItem*> stack;
+    for (int i = 0; i < tree_->topLevelItemCount(); ++i) stack.append(tree_->topLevelItem(i));
+    while (!stack.isEmpty()) {
+        QTreeWidgetItem* it = stack.takeFirst();
+        for (int i = 0; i < it->childCount(); ++i) stack.append(it->child(i));
+        if (it->data(0, kRoleSection).isValid() &&
+            it->text(0).contains(name, Qt::CaseInsensitive)) {
+            tree_->setCurrentItem(it);
+            return;
+        }
+    }
+}
+
 void MainWindow::navigateTreeItem(QTreeWidgetItem* item) {
     if (!item) return;
     const int page = item->data(0, kRolePage).toInt();
     if (page < 0) return;
-    if (page == kSectionPage) showSection(item->data(0, kRoleSection).toInt());
+    if (page == kSectionPage) {
+        const int sec = item->data(0, kRoleSection).toInt();
+        if (cpsEditorSections_ && sec >= 0 && sec < cpsEditorSections_->count()) {
+            {
+                const QSignalBlocker block(cpsEditorSections_);
+                cpsEditorSections_->setCurrentRow(sec);
+            }
+            fillCpsEditor(sec);
+            pages_->setCurrentIndex(kCpsEditorPage);
+            return;
+        }
+        showSection(sec);
+    }
     pages_->setCurrentIndex(page);
 }
 
@@ -699,6 +740,9 @@ void MainWindow::buildModelTree() {
         } else if (s.id == "zone_channel_assignment") {
             page = kZonesPage;
             zonesItem_ = it;
+        } else if (s.id == "test_channel_list" || s.id == "narrow_band_list" ||
+                   s.id == "controls") {
+            page = kCpsPanelsPage;
         }
         it->setData(0, kRolePage, page);
         it->setData(0, kRoleSection, static_cast<int>(i));
@@ -718,6 +762,7 @@ void MainWindow::buildModelTree() {
                                   {"Diff", kDiffPage},
                                   {"Radio", kRadioPage},
                                   {"CPS Tables", kCpsTablesPage},
+                                  {"CPS Blocks", kBlocksPage},
                                   {"Field Catalog", kCatalogPage}};
     for (const auto& t : toolItems) {
         auto* it = new QTreeWidgetItem(tools, QStringList{QString::fromLatin1(t.name)});
@@ -1087,6 +1132,8 @@ QWidget* MainWindow::buildRadioWidePage() {
     bindField("Disable Write Protect", disableWp);
     cl->addWidget(owner);
 
+    rwGeneralExtra_ = new QVBoxLayout;
+    cl->addLayout(rwGeneralExtra_);
     cl->addStretch(1);
     scroll->setWidget(content);
 
@@ -1305,6 +1352,15 @@ QWidget* MainWindow::buildRadioWidePage() {
     return page;
 }
 
+void MainWindow::markDirtyFieldEdit() {
+    dirty_ = true;
+    const QFileInfo info(path_);
+    setWindowTitle(info.fileName().isEmpty()
+                       ? QString("OpenDepot *")
+                       : QString("OpenDepot * - %1").arg(info.fileName()));
+    statusBar()->showMessage("Updated in memory - File > Save to keep it.", 4000);
+}
+
 void MainWindow::refreshRadioWidePage() {
     if (!rwMaxChannels_) return;
     int value = 0;
@@ -1323,6 +1379,72 @@ void MainWindow::refreshRadioWidePage() {
 
     size_t allFieldCount = 0;
     const auto* allFields = opendepot::FieldCatalog(allFieldCount);
+    if (rwGeneralExtra_) {
+        while (auto* item = rwGeneralExtra_->takeAt(0)) {
+            if (item->widget()) item->widget()->deleteLater();
+            delete item;
+        }
+        const auto* rec = FindRecord(cp_, 0x000A, 0);
+        if (rec) {
+            const auto payload = RecordPayload(*rec);
+            auto* box = new QGroupBox("General fields - all decoded");
+            auto* grid = new QGridLayout(box);
+            grid->setHorizontalSpacing(18);
+            grid->setVerticalSpacing(7);
+            int row = 0;
+            for (size_t i = 0; i < allFieldCount; ++i) {
+                const auto& field = allFields[i];
+                if (!field.name || field.bits == 0 || field.bits > 32 || field.msb > 7) continue;
+                if (QString::fromLatin1(field.group ? field.group : "") != "0xf1a8450") continue;
+                if (size_t(field.off) + size_t((field.bits + 7) / 8) > payload.size()) continue;
+                const QString name = QString::fromUtf8(field.name);
+                const uint64_t value = opendepot::ReadFieldBits(
+                    payload.data(), payload.size(), field.off, field.bits, field.msb);
+                grid->addWidget(new QLabel(name + ":"), row, 0);
+                QWidget* editor = nullptr;
+                if (field.bits == 1) {
+                    auto* check = new QCheckBox;
+                    check->setChecked(value != 0);
+                    editor = check;
+                    const opendepot::FieldDef fd = field;
+                    connect(check, &QCheckBox::toggled, this, [this, fd](bool on) {
+                        const auto* cur = FindRecord(cp_, 0x000A, 0);
+                        if (!cur) return;
+                        auto p = RecordPayload(*cur);
+                        WriteFieldBits(p, fd.off, fd.bits, fd.msb, on ? 1 : 0);
+                        if (!model_->SetRecordPayload(0x000A, 0, p)) return;
+                        markDirtyFieldEdit();
+                    });
+                } else if (field.bits <= 16) {
+                    auto* spin = new QSpinBox;
+                    spin->setRange(0, (1 << field.bits) - 1);
+                    spin->setValue(static_cast<int>(value));
+                    editor = spin;
+                    const opendepot::FieldDef fd = field;
+                    connect(spin, QOverload<int>::of(&QSpinBox::valueChanged), this,
+                            [this, fd](int next) {
+                                const auto* cur = FindRecord(cp_, 0x000A, 0);
+                                if (!cur) return;
+                                auto p = RecordPayload(*cur);
+                                WriteFieldBits(p, fd.off, fd.bits, fd.msb, uint64_t(next));
+                                if (!model_->SetRecordPayload(0x000A, 0, p)) return;
+                                markDirtyFieldEdit();
+                            });
+                } else {
+                    auto* text =
+                        new QLineEdit(QString("0x%1").arg(static_cast<qulonglong>(value), 0, 16));
+                    text->setReadOnly(true);
+                    editor = text;
+                }
+                grid->addWidget(editor, row, 1);
+                grid->setColumnStretch(1, 1);
+                ++row;
+            }
+            rwGeneralExtra_->addWidget(box);
+        }
+        rwGeneralExtra_->addStretch(1);
+    }
+
     for (auto it = rwBound_.cbegin(); it != rwBound_.cend(); ++it) {
         const opendepot::FieldDef* field = nullptr;
         for (size_t i = 0; i < allFieldCount; ++i) {
@@ -1438,7 +1560,7 @@ void MainWindow::refreshRadioWidePage() {
                     break;
                 }
             }
-            if (!match || field.bits == 0 || field.bits > 32) continue;
+            if (!match || field.bits == 0 || field.bits > 32 || field.msb > 7) continue;
             const uint16_t tag = group == "0xf1a8450" ? 0x000A : 0x000C;
             const auto* record = FindRecord(cp_, tag, 0);
             if (!record) continue;
@@ -1459,8 +1581,7 @@ void MainWindow::refreshRadioWidePage() {
                     auto p = RecordPayload(*rec);
                     WriteFieldBits(p, fd.off, fd.bits, fd.msb, on ? 1 : 0);
                     if (!model_->SetRecordPayload(tag, 0, p)) return;
-                    refreshAfterEdit();
-                    refreshRadioWidePage();
+                    markDirtyFieldEdit();
                 });
             } else if (field.bits <= 16) {
                 auto* spin = new QSpinBox;
@@ -1554,9 +1675,9 @@ void MainWindow::refreshRadioWidePage() {
             int row = 0;
             for (size_t i = 0; i < allFieldCount; ++i) {
                 const auto& field = allFields[i];
-                if (!field.name || !field.recordTag || field.bits == 0 || field.bits > 32) continue;
-                const QString fTag = QString::fromLatin1(field.recordTag).toUpper();
-                if (fTag != QString("0x%1").arg(tag, 4, 16, QChar('0')).toUpper()) continue;
+                if (!field.name || field.bits == 0 || field.bits > 32 || field.msb > 7) continue;
+                const QString wantGroup = tag == 0x000A ? "0xf1a8450" : "0xf1a7a30";
+                if (QString::fromLatin1(field.group ? field.group : "") != wantGroup) continue;
                 const QString name = QString::fromUtf8(field.name);
                 grid->addWidget(new QLabel(name + ":"), row, 0);
                 const uint64_t value = opendepot::ReadFieldBits(
@@ -1573,8 +1694,7 @@ void MainWindow::refreshRadioWidePage() {
                         auto p = RecordPayload(*rec);
                         WriteFieldBits(p, fd.off, fd.bits, fd.msb, on ? 1 : 0);
                         if (!model_->SetRecordPayload(tag, 0, p)) return;
-                        refreshAfterEdit();
-                        refreshRadioWidePage();
+                        markDirtyFieldEdit();
                     });
                 } else if (field.bits <= 16) {
                     auto* spin = new QSpinBox;
@@ -1738,6 +1858,576 @@ void MainWindow::fillFieldCatalog(int tableIndex) {
             catalogColumns_->setItem(row, 6, new QTableWidgetItem(QString::number(bind.off)));
             catalogColumns_->setItem(row, 7, new QTableWidgetItem(QString::number(bind.bits)));
             catalogColumns_->setItem(row, 8, new QTableWidgetItem(QString::number(bind.msb)));
+        }
+    }
+}
+
+QWidget* MainWindow::buildBlocksPage() {
+    auto* page = new QWidget;
+    auto* lay = new QVBoxLayout(page);
+    lay->setContentsMargins(32, 26, 32, 32);
+    lay->setSpacing(12);
+
+    auto* title = new QLabel("CPS Blocks");
+    title->setObjectName("pageTitle");
+    lay->addWidget(title);
+
+    blocksInfo_ = new QLabel;
+    blocksInfo_->setObjectName("muted");
+    blocksInfo_->setWordWrap(true);
+    lay->addWidget(blocksInfo_);
+
+    blocks_ = new QTableWidget(0, 4);
+    blocks_->setHorizontalHeaderLabels({"Record tag", "Block type", "Block name", "Present"});
+    blocks_->horizontalHeader()->setStretchLastSection(true);
+    blocks_->verticalHeader()->setVisible(false);
+    blocks_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    blocks_->setSelectionBehavior(QAbstractItemView::SelectRows);
+    blocks_->setShowGrid(false);
+    lay->addWidget(blocks_, 1);
+
+    fillBlocksPage();
+    return page;
+}
+
+void MainWindow::fillBlocksPage() {
+    if (!blocks_) return;
+    std::size_t count = 0;
+    const auto* blocks = opendepot::BlockTagCatalog(count);
+    std::map<uint16_t, int> present;
+    if (model_)
+        for (const auto& n : model_->RecordNodes()) ++present[n.tag];
+
+    blocks_->setRowCount(static_cast<int>(count));
+    for (std::size_t i = 0; i < count; ++i) {
+        const int row = static_cast<int>(i);
+        const auto& b = blocks[i];
+        const QString tag = "0x" + QString::number(b.tag, 16).rightJustified(4, '0').toUpper();
+        const QString type = "0x" + QString::number(b.type, 16).rightJustified(4, '0').toUpper();
+        blocks_->setItem(row, 0, new QTableWidgetItem(tag));
+        blocks_->setItem(row, 1, new QTableWidgetItem(type));
+        blocks_->setItem(row, 2, new QTableWidgetItem(QString::fromUtf8(b.name)));
+
+        int hits = 0;
+        auto it = present.find(b.tag);
+        if (it != present.end()) hits = it->second;
+        auto* presentItem = new QTableWidgetItem;
+        if (!have_) {
+            presentItem->setText("-");
+        } else if (hits) {
+            presentItem->setText(QString::number(hits));
+            presentItem->setForeground(QColor("#34d399"));
+        } else {
+            presentItem->setText("absent");
+            presentItem->setForeground(QColor("#64748b"));
+        }
+        blocks_->setItem(row, 3, presentItem);
+    }
+    blocks_->resizeColumnsToContents();
+
+    blocksInfo_->setText(
+        have_ ? QString("Verified block type -> record tag map recovered live from ASTRO 25 "
+                        "Portable Depot. \"Present\" counts records in the loaded codeplug by tag.")
+              : QString("Verified block type -> record tag map recovered live from ASTRO 25 "
+                        "Portable Depot (H46UCF9PW6BN). Open a codeplug to see which blocks are "
+                        "present."));
+}
+
+QWidget* MainWindow::buildCpsEditorPage() {
+    auto* page = new QWidget;
+    auto* lay = new QVBoxLayout(page);
+    lay->setContentsMargins(32, 26, 32, 32);
+    lay->setSpacing(10);
+
+    cpsEditorTitle_ = new QLabel("CPS");
+    cpsEditorTitle_->setObjectName("pageTitle");
+    lay->addWidget(cpsEditorTitle_);
+    cpsEditorSubtitle_ = new QLabel;
+    cpsEditorSubtitle_->setObjectName("muted");
+    cpsEditorSubtitle_->setWordWrap(true);
+    lay->addWidget(cpsEditorSubtitle_);
+
+    auto* split = new QHBoxLayout;
+    cpsEditorSections_ = new QListWidget;
+    cpsEditorSections_->setMaximumWidth(320);
+    cpsEditorSections_->setVisible(false);
+    split->addWidget(cpsEditorSections_, 0);
+
+    auto* scroll = new QScrollArea;
+    scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
+    cpsEditorForm_ = new QWidget;
+    cpsEditorFormLayout_ = new QVBoxLayout(cpsEditorForm_);
+    cpsEditorFormLayout_->setContentsMargins(14, 4, 14, 14);
+    cpsEditorFormLayout_->setSpacing(12);
+    scroll->setWidget(cpsEditorForm_);
+    split->addWidget(scroll, 1);
+    lay->addLayout(split, 1);
+
+    connect(cpsEditorSections_, &QListWidget::currentRowChanged, this,
+            [this](int row) { fillCpsEditor(row); });
+    refreshCpsEditorSections();
+    return page;
+}
+
+void MainWindow::refreshCpsEditorSections() {
+    if (!cpsEditorSections_) return;
+    const QSignalBlocker block(cpsEditorSections_);
+    cpsEditorSections_->clear();
+    if (!model_) {
+        fillCpsEditor(-1);
+        return;
+    }
+    for (const auto& s : model_->Sections()) {
+        QString label = QString::fromStdString(s.name);
+        if (!s.group.empty()) label = QString::fromStdString(s.group) + " / " + label;
+        cpsEditorSections_->addItem(label);
+    }
+    if (cpsEditorSections_->count() > 0) cpsEditorSections_->setCurrentRow(0);
+    fillCpsEditor(cpsEditorSections_->currentRow());
+}
+
+void MainWindow::fillCpsEditor(int sectionIndex) {
+    if (!cpsEditorFormLayout_) return;
+    while (auto* item = cpsEditorFormLayout_->takeAt(0)) {
+        if (item->widget()) item->widget()->deleteLater();
+        delete item;
+    }
+    if (!model_ || sectionIndex < 0 ||
+        sectionIndex >= static_cast<int>(model_->Sections().size())) {
+        if (cpsEditorTitle_) cpsEditorTitle_->setText("CPS");
+        if (cpsEditorSubtitle_) cpsEditorSubtitle_->clear();
+        auto* l = new QLabel("Open a codeplug to edit CPS fields.");
+        l->setObjectName("muted");
+        cpsEditorFormLayout_->addWidget(l);
+        cpsEditorFormLayout_->addStretch(1);
+        return;
+    }
+
+    size_t fieldCount = 0;
+    const auto* fields = opendepot::FieldCatalog(fieldCount);
+    const auto& section = model_->Sections()[sectionIndex];
+    if (cpsEditorTitle_) cpsEditorTitle_->setText(QString::fromStdString(section.name));
+    if (cpsEditorSubtitle_)
+        cpsEditorSubtitle_->setText(
+            QString("%1  -  %2 record(s)")
+                .arg(QString::fromStdString(section.group))
+                .arg(static_cast<int>(section.records.size())));
+
+    // Bind CPS sections to the verified block records that carry their fields.
+    QList<uint32_t> recordIds;
+    for (uint32_t id : section.records) recordIds.append(id);
+    const QString sid = QString::fromStdString(section.id);
+    QList<uint16_t> extraTags;
+    if (sid == "test_channel_list")
+        extraTags = {0x0029};
+    else if (sid == "display_menu")
+        extraTags = {0x000B};
+    else if (sid == "controls")
+        extraTags = {0x001B};
+    for (uint16_t t : extraTags) {
+        for (const auto& n : model_->RecordNodes()) {
+            if (n.tag == t && !recordIds.contains(n.id)) recordIds.append(n.id);
+        }
+    }
+
+    if (recordIds.isEmpty()) {
+        auto* l = new QLabel("No decoded records for this section.");
+        l->setObjectName("muted");
+        cpsEditorFormLayout_->addWidget(l);
+        cpsEditorFormLayout_->addStretch(1);
+        return;
+    }
+    if (cpsEditorSectionIndex_ != sectionIndex) {
+        cpsEditorSectionIndex_ = sectionIndex;
+        cpsEditorRecordSel_ = 0;
+    }
+    if (cpsEditorRecordSel_ < 0 || cpsEditorRecordSel_ >= recordIds.size()) cpsEditorRecordSel_ = 0;
+
+    if (recordIds.size() > 1) {
+        auto* row = new QWidget;
+        auto* hl = new QHBoxLayout(row);
+        hl->setContentsMargins(0, 0, 0, 0);
+        hl->addWidget(new QLabel("Record:"));
+        auto* combo = new QComboBox;
+        for (int i = 0; i < recordIds.size(); ++i) {
+            const auto* nd = findNode(recordIds[i]);
+            QString label = QString("%1 of %2").arg(i + 1).arg(recordIds.size());
+            if (nd)
+                label += QString("  0x%1").arg(nd->tag, 4, 16, QChar('0')).toUpper();
+            combo->addItem(label);
+        }
+        {
+            const QSignalBlocker block(combo);
+            combo->setCurrentIndex(cpsEditorRecordSel_);
+        }
+        hl->addWidget(combo, 1);
+        cpsEditorFormLayout_->addWidget(row);
+        connect(combo, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
+                [this, sectionIndex](int idx) {
+                    cpsEditorRecordSel_ = idx;
+                    fillCpsEditor(sectionIndex);
+                });
+    }
+
+    for (int ri = cpsEditorRecordSel_; ri <= cpsEditorRecordSel_ && ri < recordIds.size(); ++ri) {
+        const uint32_t id = recordIds[ri];
+        const auto* node = findNode(id);
+        if (!node) continue;
+        const uint32_t recordId = node->id;
+        const uint16_t tag = node->tag;
+        const QString tagText =
+            QString("0x%1").arg(static_cast<int>(tag), 4, 16, QChar('0')).toUpper();
+        QString blockName = QString::fromUtf8(opendepot::BlockNameForTag(tag));
+        if (blockName.isEmpty()) blockName = QString::fromStdString(section.name);
+        if (!node->name.empty()) blockName += "  -  " + QString::fromStdString(node->name);
+
+        QList<const opendepot::FieldDef*> matched;
+        for (size_t i = 0; i < fieldCount; ++i) {
+            const auto& f = fields[i];
+            if (!f.name || f.bits == 0 || f.bits > 32 || f.msb > 7 || !f.recordTag) continue;
+            if (QString::fromLatin1(f.recordTag).toUpper() == tagText) matched.append(&f);
+        }
+        if (matched.isEmpty()) {
+            QHash<QString, int> groupSize;
+            QHash<QString, QList<const opendepot::FieldDef*>> byGroup;
+            for (size_t i = 0; i < fieldCount; ++i) {
+                const auto& f = fields[i];
+                if (!f.name || f.bits == 0 || f.bits > 32 || f.msb > 7) continue;
+                const QString g = QString::fromUtf8(f.group ? f.group : "");
+                const int end = int(f.off) * 8 + int(f.bits);
+                if (end > groupSize.value(g)) groupSize[g] = end;
+                byGroup[g].append(&f);
+            }
+            for (auto it = groupSize.cbegin(); it != groupSize.cend(); ++it) {
+                if ((it.value() + 7) / 8 != int(node->payload.size())) continue;
+                matched = byGroup.value(it.key());
+                break;
+            }
+        }
+        if (matched.isEmpty()) continue;
+
+        auto* box = new QGroupBox(QString("%1  (%2)").arg(blockName, tagText));
+        auto* grid = new QGridLayout(box);
+        grid->setHorizontalSpacing(18);
+        grid->setVerticalSpacing(6);
+        int row = 0;
+        for (const auto* field : matched) {
+            const opendepot::FieldDef fd = *field;
+            const QString name = QString::fromUtf8(field->name);
+            const uint64_t value =
+                opendepot::ReadFieldBits(node->payload.data(), node->payload.size(), field->off,
+                                         field->bits, field->msb);
+            grid->addWidget(new QLabel(name + ":"), row, 0);
+
+            auto commit = [this, recordId, fd](uint64_t nextValue) {
+                const auto* current = findNode(recordId);
+                if (!current) return;
+                std::vector<uint8_t> payload = current->payload;
+                if (!WriteFieldBits(payload, fd.off, fd.bits, fd.msb, nextValue)) return;
+                if (!model_->SetRecordPayload(current->tag, current->inst, payload)) return;
+                refreshAfterEdit();
+            };
+
+            QWidget* editor = nullptr;
+            if (field->bits == 1) {
+                auto* check = new QCheckBox;
+                check->setChecked(value != 0);
+                check->setText(value ? "On" : "Off");
+                editor = check;
+                connect(check, &QCheckBox::toggled, this, [check, commit](bool on) {
+                    check->setText(on ? "On" : "Off");
+                    commit(on ? 1 : 0);
+                });
+            } else if (field->bits <= 16) {
+                const int maxValue = (1 << field->bits) - 1;
+                const int probe = field->bits <= 6 ? maxValue : -1;
+                bool hasEnum = false;
+                for (int v = 0; probe >= 0 && v <= probe; ++v) {
+                    if (!EnumText(name, uint64_t(v)).isEmpty()) {
+                        hasEnum = true;
+                        break;
+                    }
+                }
+                if (hasEnum) {
+                    auto* combo = new QComboBox;
+                    for (int v = 0; v <= probe; ++v) {
+                        QString label = EnumText(name, uint64_t(v));
+                        if (label.isEmpty()) label = QString::number(v);
+                        combo->addItem(QString("%1: %2").arg(v).arg(label));
+                    }
+                    combo->setCurrentIndex(value <= uint64_t(probe) ? int(value) : 0);
+                    editor = combo;
+                    connect(combo, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
+                            [commit](int idx) {
+                                if (idx >= 0) commit(uint64_t(idx));
+                            });
+                } else {
+                    auto* spin = new QSpinBox;
+                    spin->setRange(0, maxValue);
+                    spin->setValue(int(value));
+                    editor = spin;
+                    connect(spin, QOverload<int>::of(&QSpinBox::valueChanged), this,
+                            [commit](int v) { commit(uint64_t(v)); });
+                }
+            } else {
+                auto* edit = new QLineEdit;
+                edit->setText(QString("0x%1").arg(static_cast<qulonglong>(value), 0, 16).toUpper());
+                editor = edit;
+                const int bitCount = field->bits;
+                connect(edit, &QLineEdit::editingFinished, this, [edit, commit, bitCount] {
+                    const QString t = edit->text().trimmed();
+                    bool ok = false;
+                    const qulonglong v = t.startsWith("0x", Qt::CaseInsensitive)
+                                             ? t.mid(2).toULongLong(&ok, 16)
+                                             : t.toULongLong(&ok, 10);
+                    if (!ok || v >= (qulonglong(1) << bitCount)) return;
+                    commit(uint64_t(v));
+                });
+            }
+            grid->addWidget(editor, row, 1);
+            grid->setColumnStretch(1, 1);
+            ++row;
+        }
+        cpsEditorFormLayout_->addWidget(box);
+    }
+    if (cpsEditorFormLayout_->count() == 0) {
+        auto* l = new QLabel("No schema fields matched these records yet.");
+        l->setObjectName("muted");
+        cpsEditorFormLayout_->addWidget(l);
+    }
+    cpsEditorFormLayout_->addStretch(1);
+}
+
+static QString ButtonFunctionLabel(int code) {
+    switch (code) {
+        case 0x23: return "Unprogrammed";
+        case 0x19: return "Monitor";
+        case 0x1A: return "TalkAround/Direct";
+        default: break;
+    }
+    return QString("Function 0x%1").arg(QString::number(code, 16).rightJustified(2, '0').toUpper());
+}
+
+static uint32_t BeWord(const std::vector<uint8_t>& p, int off) {
+    if (off < 0 || off + 4 > int(p.size())) return 0;
+    return (uint32_t(p[off]) << 24) | (uint32_t(p[off + 1]) << 16) | (uint32_t(p[off + 2]) << 8) |
+           uint32_t(p[off + 3]);
+}
+
+QWidget* MainWindow::buildCpsPanelsPage() {
+    auto* page = new QWidget;
+    auto* outer = new QVBoxLayout(page);
+    outer->setContentsMargins(32, 26, 32, 32);
+    outer->setSpacing(10);
+    auto* title = new QLabel("CPS Panels");
+    title->setObjectName("pageTitle");
+    outer->addWidget(title);
+    auto* hint = new QLabel(
+        "Reproduced CPS dialogs: Test Channel List, Narrow Bandwidth list, and Buttons. Values read "
+        "and write the codeplug records.");
+    hint->setObjectName("muted");
+    hint->setWordWrap(true);
+    outer->addWidget(hint);
+
+    auto* scroll = new QScrollArea;
+    scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
+    auto* content = new QWidget;
+    auto* lay = new QVBoxLayout(content);
+    lay->setContentsMargins(4, 4, 4, 14);
+    lay->setSpacing(12);
+
+    // Test Channel List
+    auto* testBox = new QGroupBox("Test Channel List");
+    auto* tl = new QVBoxLayout(testBox);
+    cpsTestList_ = new QTableWidget(0, 2);
+    cpsTestList_->setHorizontalHeaderLabels({"Test Tx Freq(MHz)", "Test Rx Freq(MHz)"});
+    cpsTestList_->horizontalHeader()->setStretchLastSection(true);
+    cpsTestList_->setSelectionBehavior(QAbstractItemView::SelectRows);
+    tl->addWidget(cpsTestList_);
+    cpsTestNav_ = new QLabel("0 of 0");
+    cpsTestNav_->setObjectName("muted");
+    tl->addWidget(cpsTestNav_);
+    lay->addWidget(testBox);
+
+    connect(cpsTestList_, &QTableWidget::currentCellChanged, this,
+            [this](int row, int, int, int) {
+                if (cpsTestNav_)
+                    cpsTestNav_->setText(QString("%1 of %2").arg(row + 1).arg(cpsTestList_->rowCount()));
+            });
+    connect(cpsTestList_, &QTableWidget::itemChanged, this, [this](QTableWidgetItem* it) {
+        if (!model_ || !it) return;
+        const int inst = it->data(Qt::UserRole).toInt();
+        const int off = it->data(Qt::UserRole + 1).toInt();
+        bool ok = false;
+        const double mhz = it->text().toDouble(&ok);
+        if (!ok) return;
+        const uint32_t hz = uint32_t(std::llround(mhz * 1e6));
+        const auto* r = FindRecord(cp_, 0x0029, uint16_t(inst));
+        if (!r) return;
+        auto p = RecordPayload(*r);
+        if (off + 4 > int(p.size())) return;
+        p[off] = uint8_t(hz >> 24);
+        p[off + 1] = uint8_t(hz >> 16);
+        p[off + 2] = uint8_t(hz >> 8);
+        p[off + 3] = uint8_t(hz);
+        if (model_->SetRecordPayload(0x0029, uint16_t(inst), p)) refreshAfterEdit();
+    });
+
+    // Narrow Bandwidth list
+    auto* narrowBox = new QGroupBox("Narrow Bandwidth 12.5 kHz Only Frequency Range List");
+    auto* nl = new QVBoxLayout(narrowBox);
+    cpsNarrowList_ = new QTableWidget(0, 2);
+    cpsNarrowList_->setHorizontalHeaderLabels(
+        {"FCC Narrow Banding Start Frequency(MHz)", "FCC Narrow Banding End Frequency(MHz)"});
+    cpsNarrowList_->horizontalHeader()->setStretchLastSection(true);
+    cpsNarrowList_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    nl->addWidget(cpsNarrowList_);
+    lay->addWidget(narrowBox);
+
+    // Buttons
+    auto* btnBox = new QGroupBox("Buttons");
+    auto* bl = new QGridLayout(btnBox);
+    bl->addWidget(new QLabel(""), 0, 0);
+    bl->addWidget(new QLabel("Conventional"), 0, 1);
+    bl->addWidget(new QLabel("Trunking"), 0, 2);
+    const char* names[5] = {"Top Button", "Side 1 (Upper/No-dot)", "Side 2 (Middle/1-dot)",
+                            "Side 3 (Bottom/2-dot)", "Data Button"};
+    const int btnOffsets[5] = {9, 13, 15, 17, 21};
+    for (int i = 0; i < 5; ++i) {
+        bl->addWidget(new QLabel(QString::fromLatin1(names[i])), i + 1, 0);
+        auto* conv = new QComboBox;
+        auto* trk = new QComboBox;
+        for (int c = 0; c <= 63; ++c) {
+            const QString text = QString("0x%1: %2").arg(
+                QString::number(c, 16).rightJustified(2, '0').toUpper(), ButtonFunctionLabel(c));
+            conv->addItem(text, c);
+            trk->addItem(text, c);
+        }
+        cpsBtnConv_[i] = conv;
+        cpsBtnTrk_[i] = trk;
+        bl->addWidget(conv, i + 1, 1);
+        bl->addWidget(trk, i + 1, 2);
+        connect(conv, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
+                [this, conv, off = btnOffsets[i]](int idx) {
+                    if (!model_ || idx < 0) return;
+                    const int code = conv->itemData(idx).toInt();
+                    const auto* r = FindRecord(cp_, 0x0020, 0);
+                    if (!r) return;
+                    auto p = RecordPayload(*r);
+                    if (off >= int(p.size())) return;
+                    p[off] = uint8_t(code);
+                    if (model_->SetRecordPayload(0x0020, 0, p)) refreshAfterEdit();
+                });
+    }
+    lay->addWidget(btnBox);
+    lay->addStretch(1);
+    scroll->setWidget(content);
+    outer->addWidget(scroll, 1);
+
+    fillCpsPanels();
+    return page;
+}
+
+void MainWindow::fillCpsPanels() {
+    if (!model_) return;
+
+    // Test Channel List: one row per 0x0029 instance, Tx/Rx at payload 8/12.
+    if (cpsTestList_) {
+        const QSignalBlocker block(cpsTestList_);
+        cpsTestList_->setRowCount(0);
+        std::vector<const opendepot::RecordNode*> tests;
+        for (const auto& n : model_->RecordNodes())
+            if (n.tag == 0x0029) tests.push_back(&n);
+        std::sort(tests.begin(), tests.end(),
+                  [](const opendepot::RecordNode* a, const opendepot::RecordNode* b) {
+                      return a->inst < b->inst;
+                  });
+        for (const auto* n : tests) {
+            if (n->payload.size() < 16) continue;
+            const double tx = BeWord(n->payload, 8) / 1e6;
+            const double rx = BeWord(n->payload, 12) / 1e6;
+            const int row = cpsTestList_->rowCount();
+            cpsTestList_->insertRow(row);
+            auto* txItem = new QTableWidgetItem(QString::number(tx, 'f', 6));
+            txItem->setData(Qt::UserRole, int(n->inst));
+            txItem->setData(Qt::UserRole + 1, 8);
+            auto* rxItem = new QTableWidgetItem(QString::number(rx, 'f', 6));
+            rxItem->setData(Qt::UserRole, int(n->inst));
+            rxItem->setData(Qt::UserRole + 1, 12);
+            cpsTestList_->setItem(row, 0, txItem);
+            cpsTestList_->setItem(row, 1, rxItem);
+            cpsTestList_->setVerticalHeaderItem(row, new QTableWidgetItem(QString::number(row + 1)));
+        }
+        if (cpsTestList_->rowCount() > 0) cpsTestList_->selectRow(0);
+        if (cpsTestNav_)
+            cpsTestNav_->setText(QString("%1 of %2")
+                                     .arg(cpsTestList_->rowCount() > 0 ? 1 : 0)
+                                     .arg(cpsTestList_->rowCount()));
+    }
+
+    // Narrow Bandwidth list: best-effort detection of an 8-byte start/end list.
+    if (cpsNarrowList_) {
+        cpsNarrowList_->setRowCount(0);
+        const opendepot::RecordNode* best = nullptr;
+        std::vector<std::pair<double, double>> bestEntries;
+        for (const auto& n : model_->RecordNodes()) {
+            const auto& p = n.payload;
+            if (p.size() < 16 || p.size() % 8 != 0 || p.size() > 64) continue;
+            std::vector<std::pair<double, double>> entries;
+            for (size_t o = 0; o + 8 <= p.size(); o += 8) {
+                const uint32_t a = BeWord(p, int(o));
+                const uint32_t b = BeWord(p, int(o + 4));
+                if (a >= 100000000u && a <= 1000000000u && b >= 100000000u &&
+                    b <= 1000000000u)
+                    entries.emplace_back(a / 1e6, b / 1e6);
+            }
+            if (entries.size() > bestEntries.size()) {
+                bestEntries = std::move(entries);
+                best = &n;
+            }
+        }
+        if (best && bestEntries.size() >= 2) {
+            for (size_t i = 0; i < bestEntries.size(); ++i) {
+                const int row = cpsNarrowList_->rowCount();
+                cpsNarrowList_->insertRow(row);
+                cpsNarrowList_->setItem(
+                    row, 0, new QTableWidgetItem(QString::number(bestEntries[i].first, 'f', 6)));
+                cpsNarrowList_->setItem(
+                    row, 1, new QTableWidgetItem(QString::number(bestEntries[i].second, 'f', 6)));
+                cpsNarrowList_->setVerticalHeaderItem(row,
+                                                      new QTableWidgetItem(QString::number(row + 1)));
+            }
+        } else {
+            cpsNarrowList_->insertRow(0);
+            cpsNarrowList_->setItem(
+                0, 0,
+                new QTableWidgetItem("No narrow-band list entries detected in this codeplug."));
+            cpsNarrowList_->setSpan(0, 0, 1, 2);
+        }
+    }
+
+    // Buttons: conventional from 0x0020; trunking is not present in this codeplug.
+    const auto* convRecord = FindRecord(cp_, 0x0020, 0);
+    std::vector<uint8_t> convPayload;
+    if (convRecord) convPayload = RecordPayload(*convRecord);
+    const int btnOffsets[5] = {9, 13, 15, 17, 21};
+    for (int i = 0; i < 5; ++i) {
+        if (cpsBtnConv_[i]) {
+            const QSignalBlocker block(cpsBtnConv_[i]);
+            const int off = btnOffsets[i];
+            const bool have = int(convPayload.size()) > off;
+            const int code = have ? convPayload[off] : 0x23;
+            cpsBtnConv_[i]->setEnabled(have);
+            const int idx = cpsBtnConv_[i]->findData(code);
+            cpsBtnConv_[i]->setCurrentIndex(idx >= 0 ? idx : 0);
+        }
+        if (cpsBtnTrk_[i]) {
+            const QSignalBlocker block(cpsBtnTrk_[i]);
+            cpsBtnTrk_[i]->setEnabled(false);
+            const int idx = cpsBtnTrk_[i]->findData(0x23);
+            cpsBtnTrk_[i]->setCurrentIndex(idx >= 0 ? idx : 0);
         }
     }
 }
@@ -3000,6 +3690,9 @@ void MainWindow::setCodeplug(opendepot::Codeplug cp, const QString& path) {
     editChannel_ = -1;
     sectionIndex_ = -1;
     buildModelTree();
+    fillBlocksPage();
+    refreshCpsEditorSections();
+    fillCpsPanels();
     updateDashboard();
     pages_->setCurrentIndex(kInfoPage);
     tree_->setCurrentItem(treeRoot_);
@@ -3329,7 +4022,7 @@ void MainWindow::refreshSectionRecord(int row) {
             QHash<QString, QList<const opendepot::FieldDef*>> candidates;
             for (size_t i = 0; i < fieldCount; ++i) {
                 const auto& field = fields[i];
-                if (!field.name || field.bits == 0 || field.bits > 32) continue;
+                if (!field.name || field.bits == 0 || field.bits > 32 || field.msb > 7) continue;
                 const QString group = QString::fromUtf8(field.group ? field.group : "");
                 const int end = int(field.off) * 8 + int(field.bits);
                 if (end > groupSize.value(group)) groupSize[group] = end;
@@ -3738,6 +4431,7 @@ void MainWindow::refreshAfterEdit() {
     setWindowTitle(info.fileName().isEmpty() ? "OpenDepot *"
                                              : QString("OpenDepot * - %1").arg(info.fileName()));
     updateDashboard();
+    fillBlocksPage();
     if (sectionIndex_ >= 0) refreshSectionList();
 }
 

@@ -21,6 +21,7 @@ class QGridLayout;
 class QGroupBox;
 class QLabel;
 class QLineEdit;
+class QListWidget;
 class QPlainTextEdit;
 class QProgressDialog;
 class QPushButton;
@@ -56,6 +57,7 @@ public:
     ~MainWindow() override;
 
     void openFile(const QString& file);
+    void selectSectionByName(const QString& name);
 
 private slots:
     void openCodeplug();
@@ -98,8 +100,16 @@ private:
     void fillFieldCatalog(int tableIndex);
     QWidget* buildCpsTablesPage();
     void fillCpsTable(int tableIndex);
+    QWidget* buildBlocksPage();
+    void fillBlocksPage();
+    QWidget* buildCpsEditorPage();
+    void refreshCpsEditorSections();
+    void fillCpsEditor(int sectionIndex);
+    QWidget* buildCpsPanelsPage();
+    void fillCpsPanels();
     QWidget* buildSectionPage();
     void refreshRadioWidePage();
+    void markDirtyFieldEdit();
     void setMaxChannels(int value);
     QWidget* buildTextPage(const QString& title, QPlainTextEdit** out, const QString& button,
                            void (MainWindow::*handler)());
@@ -142,12 +152,27 @@ private:
     QTableWidget* cpsTableList_ = nullptr;
     QTableWidget* cpsGrid_ = nullptr;
     QLabel* cpsTableInfo_ = nullptr;
+    QTableWidget* blocks_ = nullptr;
+    QLabel* blocksInfo_ = nullptr;
+    QListWidget* cpsEditorSections_ = nullptr;
+    QLabel* cpsEditorTitle_ = nullptr;
+    QLabel* cpsEditorSubtitle_ = nullptr;
+    QWidget* cpsEditorForm_ = nullptr;
+    QVBoxLayout* cpsEditorFormLayout_ = nullptr;
+    int cpsEditorSectionIndex_ = -1;
+    int cpsEditorRecordSel_ = 0;
+    QTableWidget* cpsTestList_ = nullptr;
+    QLabel* cpsTestNav_ = nullptr;
+    QTableWidget* cpsNarrowList_ = nullptr;
+    QComboBox* cpsBtnConv_[5] = {};
+    QComboBox* cpsBtnTrk_[5] = {};
     QSpinBox* rwMaxChannels_ = nullptr;
     QHash<QString, QWidget*> rwBound_;
     QHash<QString, QVBoxLayout*> rwTabLayouts_;
     QTableWidget* rwNamedFields_ = nullptr;
     QWidget* rwAllForm_ = nullptr;
     QVBoxLayout* rwAllFormLayout_ = nullptr;
+    QVBoxLayout* rwGeneralExtra_ = nullptr;
     QLineEdit* zoneNameEdit_ = nullptr;
     QLineEdit* channelNameEdit_ = nullptr;
     QLineEdit* rxEdit_ = nullptr;
