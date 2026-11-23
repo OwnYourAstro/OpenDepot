@@ -362,6 +362,23 @@ QIcon TreeIcon(const QString& text, bool isGroup) {
                     QColor(isGroup ? "#64748b" : "#94a3b8"));
 }
 
+bool WriteFieldBits(std::vector<uint8_t>& data, uint16_t off, uint16_t bits, uint8_t msb,
+                    uint64_t value) {
+    if (bits == 0 || bits > 32) return false;
+    const size_t pos = size_t(off) * 8 + (7 - msb);
+    if (pos + bits > data.size() * 8) return false;
+    for (uint16_t i = 0; i < bits; ++i) {
+        const size_t bit = pos + i;
+        const bool set = (value >> (bits - 1 - i)) & 1;
+        const uint8_t mask = uint8_t(1u << (7 - (bit % 8)));
+        if (set)
+            data[bit / 8] |= mask;
+        else
+            data[bit / 8] &= uint8_t(~mask);
+    }
+    return true;
+}
+
 QString HexBytes(const std::vector<uint8_t>& p) {
     QString s;
     s.reserve(int(p.size()) * 3);
@@ -915,7 +932,7 @@ QWidget* MainWindow::buildZonesPage() {
 QWidget* MainWindow::buildRadioWidePage() {
     auto* page = new QWidget;
     rwBound_.clear();
-    rwTabFields_.clear();
+    rwTabLayouts_.clear();
     auto* lay = new QVBoxLayout(page);
     lay->setContentsMargins(32, 26, 32, 32);
     lay->setSpacing(10);
@@ -1075,20 +1092,16 @@ QWidget* MainWindow::buildRadioWidePage() {
 
     auto* generalButton = addPage("General", scroll, 3, 0);
     auto addTableTab = [&](const QString& name, int row, int col) {
-        auto* w = new QWidget;
-        auto* wl = new QVBoxLayout(w);
-        auto* hint = new QLabel("Decoded fields from records 0x000A / 0x000C.");
-        hint->setObjectName("muted");
-        wl->addWidget(hint);
-        auto* table = new QTableWidget(0, 2);
-        table->setHorizontalHeaderLabels({"Field", "Value"});
-        table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
-        table->verticalHeader()->setVisible(false);
-        table->setEditTriggers(QAbstractItemView::NoEditTriggers);
-        table->setShowGrid(false);
-        rwTabFields_.insert(name, table);
-        wl->addWidget(table, 1);
-        addPage(name, w, row, col);
+        auto* content = new QWidget;
+        auto* wl = new QVBoxLayout(content);
+        wl->setContentsMargins(12, 10, 12, 10);
+        wl->setSpacing(10);
+        auto* scroll = new QScrollArea;
+        scroll->setWidgetResizable(true);
+        scroll->setFrameShape(QFrame::NoFrame);
+        scroll->setWidget(content);
+        rwTabLayouts_.insert(name, wl);
+        addPage(name, scroll, row, col);
     };
     const char* generalTabs[] = {"Emergency", "TPS", "Alert Tones", "Time-Out Timers", "Alarm",
                                  "Home Mode"};
@@ -1256,6 +1269,20 @@ QWidget* MainWindow::buildRadioWidePage() {
     nl->addWidget(rwNamedFields_, 1);
     addPage("Named Fields", named, 4, 0);
 
+    auto* allFields = new QWidget;
+    rwAllForm_ = new QWidget;
+    rwAllFormLayout_ = new QVBoxLayout(rwAllForm_);
+    rwAllFormLayout_->setContentsMargins(12, 10, 12, 10);
+    rwAllFormLayout_->setSpacing(10);
+    auto* allScroll = new QScrollArea;
+    allScroll->setWidgetResizable(true);
+    allScroll->setFrameShape(QFrame::NoFrame);
+    allScroll->setWidget(rwAllForm_);
+    auto* allLay = new QVBoxLayout(allFields);
+    allLay->setContentsMargins(0, 0, 0, 0);
+    allLay->addWidget(allScroll);
+    addPage("All Options", allFields, 4, 1);
+
     for (int col = 0; col < 7; ++col) tabGrid->setColumnStretch(col, 1);
     stack->setCurrentIndex(0);
     generalButton->setChecked(true);
@@ -1364,9 +1391,13 @@ void MainWindow::refreshRadioWidePage() {
         }
     }
 
-    for (auto it = rwTabFields_.cbegin(); it != rwTabFields_.cend(); ++it) {
-        QTableWidget* table = it.value();
-        table->setRowCount(0);
+    for (auto it = rwTabLayouts_.cbegin(); it != rwTabLayouts_.cend(); ++it) {
+        QVBoxLayout* layout = it.value();
+        if (!layout) continue;
+        while (auto* item = layout->takeAt(0)) {
+            if (item->widget()) item->widget()->deleteLater();
+            delete item;
+        }
         QStringList terms;
         const QString tab = it.key();
         if (tab.contains("Tx Audio")) {
@@ -1390,6 +1421,11 @@ void MainWindow::refreshRadioWidePage() {
         } else {
             terms = {"Advanced", "Control", "Timer", "Power", "Audio"};
         }
+        auto* box = new QGroupBox(tab + " options");
+        auto* grid = new QGridLayout(box);
+        grid->setHorizontalSpacing(18);
+        grid->setVerticalSpacing(7);
+        int row = 0;
         for (size_t i = 0; i < allFieldCount; ++i) {
             const auto& field = allFields[i];
             const QString group = QString::fromLatin1(field.group ? field.group : "");
@@ -1402,7 +1438,7 @@ void MainWindow::refreshRadioWidePage() {
                     break;
                 }
             }
-            if (!match || field.bits == 0) continue;
+            if (!match || field.bits == 0 || field.bits > 32) continue;
             const uint16_t tag = group == "0xf1a8450" ? 0x000A : 0x000C;
             const auto* record = FindRecord(cp_, tag, 0);
             if (!record) continue;
@@ -1410,33 +1446,55 @@ void MainWindow::refreshRadioWidePage() {
             if (size_t(field.off) + size_t((field.bits + 7) / 8) > payload.size()) continue;
             const uint64_t raw = opendepot::ReadFieldBits(payload.data(), payload.size(), field.off,
                                                           field.bits, field.msb);
-            QString value;
-            if (field.bits >= 8) {
-                std::string text;
-                for (size_t b = 0; b < size_t(field.bits + 7) / 8; ++b) {
-                    const uint8_t c = payload[field.off + b];
-                    if (c == 0) break;
-                    if (c >= 0x20 && c < 0x7F) text.push_back(char(c));
-                }
-                value = QString::fromLatin1(text.c_str());
+            grid->addWidget(new QLabel(name + ":"), row, 0);
+            QWidget* editor = nullptr;
+            if (field.bits == 1) {
+                auto* check = new QCheckBox;
+                check->setChecked(raw != 0);
+                editor = check;
+                const opendepot::FieldDef fd = field;
+                connect(check, &QCheckBox::toggled, this, [this, tag, fd](bool on) {
+                    const auto* rec = FindRecord(cp_, tag, 0);
+                    if (!rec) return;
+                    auto p = RecordPayload(*rec);
+                    WriteFieldBits(p, fd.off, fd.bits, fd.msb, on ? 1 : 0);
+                    if (!model_->SetRecordPayload(tag, 0, p)) return;
+                    refreshAfterEdit();
+                    refreshRadioWidePage();
+                });
+            } else if (field.bits <= 16) {
+                auto* spin = new QSpinBox;
+                spin->setRange(0, (1 << field.bits) - 1);
+                spin->setValue(static_cast<int>(raw));
+                editor = spin;
+                const opendepot::FieldDef fd = field;
+                connect(spin, QOverload<int>::of(&QSpinBox::valueChanged), this,
+                        [this, tag, fd](int next) {
+                            const auto* rec = FindRecord(cp_, tag, 0);
+                            if (!rec) return;
+                            auto p = RecordPayload(*rec);
+                            WriteFieldBits(p, fd.off, fd.bits, fd.msb, uint64_t(next));
+                            if (!model_->SetRecordPayload(tag, 0, p)) return;
+                            refreshAfterEdit();
+                            refreshRadioWidePage();
+                        });
+            } else {
+                auto* edit = new QLineEdit(QString("0x%1").arg(static_cast<qulonglong>(raw), 0, 16));
+                edit->setReadOnly(true);
+                editor = edit;
             }
-            if (value.isEmpty()) {
-                value = EnumText(name, raw);
-                if (value.isEmpty())
-                    value = field.bits > 32
-                                ? QString("0x%1").arg(static_cast<qulonglong>(raw), 0, 16)
-                                : QString::number(static_cast<qulonglong>(raw));
-            }
-            const int row = table->rowCount();
-            table->insertRow(row);
-            table->setItem(row, 0, new QTableWidgetItem(name));
-            table->setItem(row, 1, new QTableWidgetItem(value));
+            grid->addWidget(editor, row, 1);
+            grid->setColumnStretch(1, 1);
+            ++row;
         }
-        if (table->rowCount() == 0) {
-            table->insertRow(0);
-            table->setItem(0, 0, new QTableWidgetItem("No matching named fields."));
-            table->setSpan(0, 0, 1, 2);
+        if (row == 0) {
+            auto* none = new QLabel("No decoded fields in this tab yet.");
+            none->setObjectName("muted");
+            layout->addWidget(none);
+        } else {
+            layout->addWidget(box);
         }
+        layout->addStretch(1);
     }
 
     if (!rwNamedFields_) return;
@@ -1478,6 +1536,75 @@ void MainWindow::refreshRadioWidePage() {
                                   : QString::number(static_cast<qulonglong>(bits));
         }
         rwNamedFields_->setItem(row, 5, new QTableWidgetItem(valueText));
+    }
+
+    if (rwAllFormLayout_) {
+        while (auto* item = rwAllFormLayout_->takeAt(0)) {
+            if (item->widget()) item->widget()->deleteLater();
+            delete item;
+        }
+        for (uint16_t tag : {uint16_t(0x000A), uint16_t(0x000C)}) {
+            const auto* record = FindRecord(cp_, tag, 0);
+            if (!record) continue;
+            const auto payload = RecordPayload(*record);
+            auto* box = new QGroupBox(QString("Record 0x%1").arg(tag, 4, 16, QChar('0')));
+            auto* grid = new QGridLayout(box);
+            grid->setHorizontalSpacing(18);
+            grid->setVerticalSpacing(7);
+            int row = 0;
+            for (size_t i = 0; i < allFieldCount; ++i) {
+                const auto& field = allFields[i];
+                if (!field.name || !field.recordTag || field.bits == 0 || field.bits > 32) continue;
+                const QString fTag = QString::fromLatin1(field.recordTag).toUpper();
+                if (fTag != QString("0x%1").arg(tag, 4, 16, QChar('0')).toUpper()) continue;
+                const QString name = QString::fromUtf8(field.name);
+                grid->addWidget(new QLabel(name + ":"), row, 0);
+                const uint64_t value = opendepot::ReadFieldBits(
+                    payload.data(), payload.size(), field.off, field.bits, field.msb);
+                QWidget* editor = nullptr;
+                if (field.bits == 1) {
+                    auto* check = new QCheckBox;
+                    check->setChecked(value != 0);
+                    editor = check;
+                    const opendepot::FieldDef fd = field;
+                    connect(check, &QCheckBox::toggled, this, [this, tag, fd](bool on) {
+                        const auto* rec = FindRecord(cp_, tag, 0);
+                        if (!rec) return;
+                        auto p = RecordPayload(*rec);
+                        WriteFieldBits(p, fd.off, fd.bits, fd.msb, on ? 1 : 0);
+                        if (!model_->SetRecordPayload(tag, 0, p)) return;
+                        refreshAfterEdit();
+                        refreshRadioWidePage();
+                    });
+                } else if (field.bits <= 16) {
+                    auto* spin = new QSpinBox;
+                    spin->setRange(0, (1 << field.bits) - 1);
+                    spin->setValue(static_cast<int>(value));
+                    editor = spin;
+                    const opendepot::FieldDef fd = field;
+                    connect(spin, QOverload<int>::of(&QSpinBox::valueChanged), this,
+                            [this, tag, fd](int next) {
+                                const auto* rec = FindRecord(cp_, tag, 0);
+                                if (!rec) return;
+                                auto p = RecordPayload(*rec);
+                                WriteFieldBits(p, fd.off, fd.bits, fd.msb, uint64_t(next));
+                                if (!model_->SetRecordPayload(tag, 0, p)) return;
+                                refreshAfterEdit();
+                                refreshRadioWidePage();
+                            });
+                } else {
+                    auto* text = new QLineEdit(
+                        QString("0x%1").arg(static_cast<qulonglong>(value), 0, 16));
+                    text->setReadOnly(true);
+                    editor = text;
+                }
+                grid->addWidget(editor, row, 1);
+                grid->setColumnStretch(1, 1);
+                ++row;
+            }
+            rwAllFormLayout_->addWidget(box);
+        }
+        rwAllFormLayout_->addStretch(1);
     }
 }
 
@@ -2125,7 +2252,16 @@ QWidget* MainWindow::buildSectionPage() {
     sectionNamed_->setEditTriggers(QAbstractItemView::NoEditTriggers);
     sectionNamed_->setShowGrid(false);
     tabs->addTab(sectionNamed_, "Named fields");
-    tabs->setCurrentWidget(sectionNamed_);
+    sectionForm_ = new QWidget;
+    sectionFormLayout_ = new QVBoxLayout(sectionForm_);
+    sectionFormLayout_->setContentsMargins(12, 10, 12, 10);
+    sectionFormLayout_->setSpacing(10);
+    auto* formScroll = new QScrollArea;
+    formScroll->setWidgetResizable(true);
+    formScroll->setFrameShape(QFrame::NoFrame);
+    formScroll->setWidget(sectionForm_);
+    tabs->addTab(formScroll, "CPS Panel");
+    tabs->setCurrentWidget(formScroll);
 
     auto* hexWrap = new QWidget;
     auto* hexLay = new QVBoxLayout(hexWrap);
@@ -3167,6 +3303,105 @@ void MainWindow::refreshSectionRecord(int row) {
                 0, 0, new QTableWidgetItem("No named field group decoded for this record."));
             sectionNamed_->setSpan(0, 0, 1, 6);
         }
+    }
+
+    if (sectionFormLayout_) {
+        while (auto* item = sectionFormLayout_->takeAt(0)) {
+            if (item->widget()) item->widget()->deleteLater();
+            delete item;
+        }
+        const QString recordTag =
+            QString("0x%1").arg(static_cast<int>(n->tag), 4, 16, QChar('0')).toUpper();
+        size_t fieldCount = 0;
+        const auto* fields = opendepot::FieldCatalog(fieldCount);
+        QHash<QString, QList<const opendepot::FieldDef*>> groups;
+        for (size_t i = 0; i < fieldCount; ++i) {
+            const auto& field = fields[i];
+            if (!field.name || !field.recordTag || field.bits == 0 || field.bits > 32) continue;
+            if (QString::fromLatin1(field.recordTag).toUpper() != recordTag) continue;
+            groups[recordTag].append(&field);
+        }
+        if (groups.isEmpty()) {
+            QHash<QString, int> groupSize;
+            QHash<QString, QList<const opendepot::FieldDef*>> candidates;
+            for (size_t i = 0; i < fieldCount; ++i) {
+                const auto& field = fields[i];
+                if (!field.name || field.bits == 0 || field.bits > 32) continue;
+                const QString group = QString::fromUtf8(field.group ? field.group : "");
+                const int end = int(field.off) * 8 + int(field.bits);
+                if (end > groupSize.value(group)) groupSize[group] = end;
+                candidates[group].append(&field);
+            }
+            for (auto it = groupSize.cbegin(); it != groupSize.cend(); ++it) {
+                if ((it.value() + 7) / 8 != int(n->payload.size())) continue;
+                groups[recordTag] = candidates.value(it.key());
+                break;
+            }
+        }
+        for (auto it = groups.cbegin(); it != groups.cend(); ++it) {
+            auto* box = new QGroupBox("Record " + it.key() + " decoded fields");
+            auto* grid = new QGridLayout(box);
+            grid->setHorizontalSpacing(18);
+            grid->setVerticalSpacing(7);
+            int row = 0;
+            for (const auto* field : it.value()) {
+                const QString name = QString::fromUtf8(field->name);
+                grid->addWidget(new QLabel(name + ":"), row, 0);
+                const uint64_t value =
+                    opendepot::ReadFieldBits(n->payload.data(), n->payload.size(), field->off,
+                                             field->bits, field->msb);
+                QWidget* editor = nullptr;
+                if (field->bits == 1) {
+                    auto* check = new QCheckBox;
+                    check->setChecked(value != 0);
+                    editor = check;
+                    const auto fd = *field;
+                    connect(check, &QCheckBox::toggled, this, [this, fd, editor, row](bool on) {
+                        const int recordRow = sectionRecords_->currentRow();
+                        auto* id = sectionRecords_->item(recordRow, 0);
+                        if (!id) return;
+                        const auto* node = findNode(id->data(kRoleRecordId).toUInt());
+                        if (!node) return;
+                        std::vector<uint8_t> payload = node->payload;
+                        WriteFieldBits(payload, fd.off, fd.bits, fd.msb, on ? 1 : 0);
+                        if (!model_->SetRecordPayload(node->tag, node->inst, payload)) return;
+                        refreshAfterEdit();
+                        refreshSectionRecord(recordRow);
+                    });
+                } else {
+                    auto* spin = new QSpinBox;
+                    const int maxValue = field->bits >= 31 ? INT_MAX
+                                                           : ((1 << field->bits) - 1);
+                    spin->setRange(0, maxValue);
+                    spin->setValue(static_cast<int>(value));
+                    editor = spin;
+                    const auto fd = *field;
+                    connect(spin, QOverload<int>::of(&QSpinBox::valueChanged), this,
+                            [this, fd](int next) {
+                                const int recordRow = sectionRecords_->currentRow();
+                                auto* id = sectionRecords_->item(recordRow, 0);
+                                if (!id) return;
+                                const auto* node = findNode(id->data(kRoleRecordId).toUInt());
+                                if (!node) return;
+                                std::vector<uint8_t> payload = node->payload;
+                                WriteFieldBits(payload, fd.off, fd.bits, fd.msb, uint64_t(next));
+                                if (!model_->SetRecordPayload(node->tag, node->inst, payload)) return;
+                                refreshAfterEdit();
+                                refreshSectionRecord(recordRow);
+                            });
+                }
+                grid->addWidget(editor, row, 1);
+                grid->setColumnStretch(1, 1);
+                ++row;
+            }
+            sectionFormLayout_->addWidget(box);
+        }
+        if (groups.isEmpty()) {
+            auto* none = new QLabel("No decoded controls for this record; use Named fields or Hex.");
+            none->setObjectName("muted");
+            sectionFormLayout_->addWidget(none);
+        }
+        sectionFormLayout_->addStretch(1);
     }
 
     const bool isTable = n->family == "name_table" && !n->names.empty();

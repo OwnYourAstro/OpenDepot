@@ -32,6 +32,8 @@ class QTableWidgetItem;
 class QTimer;
 class QTreeWidget;
 class QTreeWidgetItem;
+class QVBoxLayout;
+class QWidget;
 
 struct RadioJob {
     std::atomic<bool> done{false};
@@ -142,8 +144,10 @@ private:
     QLabel* cpsTableInfo_ = nullptr;
     QSpinBox* rwMaxChannels_ = nullptr;
     QHash<QString, QWidget*> rwBound_;
-    QHash<QString, QTableWidget*> rwTabFields_;
+    QHash<QString, QVBoxLayout*> rwTabLayouts_;
     QTableWidget* rwNamedFields_ = nullptr;
+    QWidget* rwAllForm_ = nullptr;
+    QVBoxLayout* rwAllFormLayout_ = nullptr;
     QLineEdit* zoneNameEdit_ = nullptr;
     QLineEdit* channelNameEdit_ = nullptr;
     QLineEdit* rxEdit_ = nullptr;
@@ -164,6 +168,8 @@ private:
     QPlainTextEdit* sectionHex_ = nullptr;
     QTableWidget* sectionFields_ = nullptr;
     QTableWidget* sectionNamed_ = nullptr;
+    QWidget* sectionForm_ = nullptr;
+    QVBoxLayout* sectionFormLayout_ = nullptr;
     QTableWidget* sectionNames_ = nullptr;
     QLineEdit* sectionNameEdit_ = nullptr;
     QPushButton* sectionApplyNames_ = nullptr;
