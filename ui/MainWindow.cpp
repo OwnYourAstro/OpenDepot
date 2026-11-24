@@ -937,6 +937,9 @@ QWidget* MainWindow::buildZonesPage() {
     auto* addButton = new QPushButton("Add channel");
     connect(addButton, &QPushButton::clicked, this, &MainWindow::addChannel);
     row2->addWidget(addButton);
+    auto* removeButton = new QPushButton("Remove channel");
+    connect(removeButton, &QPushButton::clicked, this, &MainWindow::removeChannel);
+    row2->addWidget(removeButton);
     auto* apply = new QPushButton("Apply changes");
     apply->setObjectName("accent");
     connect(apply, &QPushButton::clicked, this, &MainWindow::applyChannelEdit);
@@ -4487,6 +4490,46 @@ void MainWindow::addChannel() {
     showZones();
     selectChannelRow(zone, index);
     statusBar()->showMessage("Channel added in memory - File > Save to keep it.", 8000);
+}
+
+void MainWindow::removeChannel() {
+    if (!model_) return;
+    if (editZone_ < 0 || editChannel_ < 0 || !model_->Channel(editZone_, editChannel_)) {
+        QMessageBox::information(this, "Remove channel", "Select a channel first.");
+        return;
+    }
+    const auto* zone = model_->Zone(editZone_);
+    if (!zone || zone->channels.size() <= 1) {
+        QMessageBox::information(this, "Remove channel",
+                                 "A zone must keep at least one channel.");
+        return;
+    }
+    const auto* ch = model_->Channel(editZone_, editChannel_);
+    const QString name = QString::fromStdString(ch->name);
+    if (QMessageBox::question(
+            this, "Remove channel",
+            QString("Delete channel \"%1\" and its personality/astro records?")
+                .arg(name),
+            QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
+        return;
+    const int zoneIndex = editZone_;
+    const int removedIndex = editChannel_;
+    if (!model_->RemoveChannel(zoneIndex, removedIndex)) {
+        QMessageBox::warning(
+            this, "Remove channel",
+            "The channel could not be removed. It may still be referenced by a scan list "
+            "or another object, or the zone has only one channel.");
+        return;
+    }
+    const int remaining = int(model_->Zone(zoneIndex)->channels.size());
+    const int next = remaining > 0 ? std::min(removedIndex, remaining - 1) : -1;
+    refreshAfterEdit();
+    buildModelTree();
+    showZones();
+    if (next >= 0) selectChannelRow(zoneIndex, next);
+    editZone_ = zoneIndex;
+    editChannel_ = next;
+    statusBar()->showMessage("Channel removed in memory - File > Save to keep it.", 8000);
 }
 
 void MainWindow::applyChannelEdit() {

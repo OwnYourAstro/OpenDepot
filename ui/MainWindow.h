@@ -89,6 +89,7 @@ private:
     void exportPlainText();
     void applyChannelEdit();
     void addChannel();
+    void removeChannel();
     void refreshPorts();
     void refreshAfterEdit();
     void refreshZones();

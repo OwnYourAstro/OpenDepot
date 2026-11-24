@@ -1,4 +1,4 @@
-﻿# Depot-generated corpus analysis
+# Depot-generated corpus analysis
 
 Analysis of the clean Depot-generated codeplugs used to derive model manifests.
 No user zones, channels, names, or identities are reproduced here.
@@ -78,13 +78,13 @@ lengths, not the base tag set:
 | `0x0FCD` Conventional Personality Floating | 1 | 10 | 16 | one per channel |
 | `0x0FFD` Zone Channel Assignment page | 1 | 41 | 2 pages, 216/356 | `6 + 35 * channels_in_page` |
 | `0x0FFF` Channel Text | 1 | 23 | 278 | `6 + 17 * channel_count` |
-| `0x0FB4` | 1 | 13 | 2 | one per zone (observed) |
-| `0x0FB5` | 1 | 18 | 2 | one per zone (observed) |
-| `0x0FBE` | 1 | 3 | 2 | one per zone (observed) |
-| `0x0FCB` | 1 | 15 | 2 | one per zone (observed) |
-| `0x0FCC` | 1 | 33 | 2 | one per zone (observed) |
-| `0x0FF9` | 1 | 14 | 2 | one per zone (observed) |
-| `0x0FFA` | 1 | 60 | 2 | one per zone (observed) |
+| `0x0FB4` | 1 | 13 | 2 | one per page slot (0/1) |
+| `0x0FB5` | 1 | 18 | 2 | one per page slot (0/1) |
+| `0x0FBE` | 1 | 3 | 2 | one per page slot (0/1) |
+| `0x0FCB` | 1 | 15 | 2 | one per page slot (0/1) |
+| `0x0FCC` | 1 | 33 | 2 | one per page slot (0/1) |
+| `0x0FF9` | 1 | 14 | 2 | one per page slot (0/1) |
+| `0x0FFA` | 1 | 60 | 2 | one per page slot (0/1) |
 
 Verified formulas from the example:
 
@@ -118,15 +118,17 @@ a builder that can create or resize zones/channels to model capacity.
 
 ## Conventional channel builder (implemented)
 
-`CodeplugModel::AddChannel` now performs the multi-record channel transaction:
+`CodeplugModel::AddChannel` performs the multi-record channel transaction:
 
-- appends a 35-byte entry to `0x0FFD` and bumps its count
-- creates a second `0x0FFD` page after 10 entries and links it from the first page
-- appends the channel name to `0x0FFF` and bumps the name count
-- creates `0x0FFB` and `0x0FCD` records and points the new personality at the new
-  `0x0FCD` instance
-- clones the per-page records `0x0FB4/0x0FB5/0x0FBE/0x0FCB/0x0FCC/0x0FF9/0x0FFA`
-  when a second page is created
+- appends a 35-byte entry to the zone's `0x0FFD` page and bumps its count
+- creates the zone's second `0x0FFD` page after 10 entries and links it from
+  the first page
+- appends the channel name to the zone's `0x0FFF` table and bumps the count
+- creates `0x0FFB` and `0x0FCD` records and points the new personality at the
+  new `0x0FCD` instance
+- creates the shared second-page-slot records
+  `0x0FB4/0x0FB5/0x0FBE/0x0FCB/0x0FCC/0x0FF9/0x0FFA` once (instances 0 and 1
+  are shared by every zone's first/second page, not copied per zone)
 - enforces the `0x0FFB` instance capacity from `ModelReadRequests` (16 for
   H46UCF9PW6BN)
 
@@ -136,10 +138,23 @@ payload lengths as the real 16-channel backup. The only difference was
 `0x0016` (Cnv Menu Item Block, 10 vs 11 bytes), which is a menu/switch
 configuration record and is unchanged by adding channels.
 
-`opendepot_conventional_test` covers 1→16 channels, save/reload, validation, and
-the page-scoped records. CLI: `--add-channel <in> <out> <zone> <name> <rx> <tx>`.
+`CodeplugModel::RemoveChannel` is the inverse transaction:
 
-Remaining conventional work: remove/reorder channel, add/remove zone, scan-list
+- refuses to remove the last channel in a zone
+- refuses if another record (for example a scan list) still references the
+  personality
+- removes the 35-byte entry and its `0x0FFB`/`0x0FCD` records
+- shifts/resizes the zone `0x0FFF` name table
+- repacks `0x0FFD` and deletes the zone's second page when it becomes empty
+- deletes the shared slot-1 records only when no other zone still has a second
+  page
+
+`opendepot_conventional_test` covers add/remove, page-one deletion, name
+shifting, save/reload, validation, capacity rejection, and the last-channel
+policy. CLI: `--add-channel <in> <out> <zone> <name> <rx> <tx>` and
+`--remove-channel <in> <out> <zone> <channel>`.
+
+Remaining conventional work: reorder channel, add/remove zone, scan-list
 membership, and the authoritative section map.
 ## What this means
 
