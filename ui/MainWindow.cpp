@@ -34,6 +34,7 @@
 #include <QHash>
 #include <QHeaderView>
 #include <QIcon>
+#include <QInputDialog>
 #include <QKeySequence>
 #include <QLabel>
 #include <QLineEdit>
@@ -740,9 +741,6 @@ void MainWindow::buildModelTree() {
         } else if (s.id == "zone_channel_assignment") {
             page = kZonesPage;
             zonesItem_ = it;
-        } else if (s.id == "test_channel_list" || s.id == "narrow_band_list" ||
-                   s.id == "controls") {
-            page = kCpsPanelsPage;
         }
         it->setData(0, kRolePage, page);
         it->setData(0, kRoleSection, static_cast<int>(i));
@@ -936,6 +934,9 @@ QWidget* MainWindow::buildZonesPage() {
     txSqEdit_->setMaximumWidth(70);
     row2->addWidget(txSqEdit_);
     row2->addStretch(1);
+    auto* addButton = new QPushButton("Add channel");
+    connect(addButton, &QPushButton::clicked, this, &MainWindow::addChannel);
+    row2->addWidget(addButton);
     auto* apply = new QPushButton("Apply changes");
     apply->setObjectName("accent");
     connect(apply, &QPushButton::clicked, this, &MainWindow::applyChannelEdit);
@@ -1762,7 +1763,7 @@ QWidget* MainWindow::buildFieldCatalogPage() {
         boundCount += tables[i].boundColumnCount;
     }
     auto* subtitle = new QLabel(
-        QString("%1 fields · %2 tables · %3/%4 columns bound")
+        QString("%1 fields Â· %2 tables Â· %3/%4 columns bound")
             .arg(static_cast<qulonglong>(fieldCount))
             .arg(static_cast<qulonglong>(tableCount))
             .arg(static_cast<qulonglong>(boundCount))
@@ -2017,20 +2018,6 @@ void MainWindow::fillCpsEditor(int sectionIndex) {
     // Bind CPS sections to the verified block records that carry their fields.
     QList<uint32_t> recordIds;
     for (uint32_t id : section.records) recordIds.append(id);
-    const QString sid = QString::fromStdString(section.id);
-    QList<uint16_t> extraTags;
-    if (sid == "test_channel_list")
-        extraTags = {0x0029};
-    else if (sid == "display_menu")
-        extraTags = {0x000B};
-    else if (sid == "controls")
-        extraTags = {0x001B};
-    for (uint16_t t : extraTags) {
-        for (const auto& n : model_->RecordNodes()) {
-            if (n.tag == t && !recordIds.contains(n.id)) recordIds.append(n.id);
-        }
-    }
-
     if (recordIds.isEmpty()) {
         auto* l = new QLabel("No decoded records for this section.");
         l->setObjectName("muted");
@@ -2041,6 +2028,27 @@ void MainWindow::fillCpsEditor(int sectionIndex) {
     if (cpsEditorSectionIndex_ != sectionIndex) {
         cpsEditorSectionIndex_ = sectionIndex;
         cpsEditorRecordSel_ = 0;
+        // Sections can mix decoded blocks with header/list records. Start on a
+        // record that actually has schema fields instead of always record 1.
+        auto hasDecodedFields = [&](uint32_t id) {
+            const auto* n = findNode(id);
+            if (!n) return false;
+            const QString tagText =
+                QString("0x%1").arg(n->tag, 4, 16, QChar('0')).toUpper();
+            for (size_t fi = 0; fi < fieldCount; ++fi) {
+                const auto& f = fields[fi];
+                if (!f.name || !f.recordTag || f.bits == 0 || f.bits > 32 || f.msb > 7)
+                    continue;
+                if (QString::fromLatin1(f.recordTag).toUpper() == tagText) return true;
+            }
+            return false;
+        };
+        for (int i = 0; i < recordIds.size(); ++i) {
+            if (hasDecodedFields(recordIds[i])) {
+                cpsEditorRecordSel_ = i;
+                break;
+            }
+        }
     }
     if (cpsEditorRecordSel_ < 0 || cpsEditorRecordSel_ >= recordIds.size()) cpsEditorRecordSel_ = 0;
 
@@ -2089,6 +2097,19 @@ void MainWindow::fillCpsEditor(int sectionIndex) {
             if (QString::fromLatin1(f.recordTag).toUpper() == tagText) matched.append(&f);
         }
         if (matched.isEmpty()) {
+            // Some records have a different tag for the same CPS block. Match
+            // by the verified block type before falling back to payload size.
+            const auto* block = opendepot::FindBlockByTag(tag);
+            if (block) {
+                for (size_t i = 0; i < fieldCount; ++i) {
+                    const auto& f = fields[i];
+                    if (!f.name || f.bits == 0 || f.bits > 32 || f.msb > 7) continue;
+                    if (f.blockId == int(block->type)) matched.append(&f);
+                }
+            }
+        }
+        bool inferredBySize = false;
+        if (matched.isEmpty()) {
             QHash<QString, int> groupSize;
             QHash<QString, QList<const opendepot::FieldDef*>> byGroup;
             for (size_t i = 0; i < fieldCount; ++i) {
@@ -2099,15 +2120,103 @@ void MainWindow::fillCpsEditor(int sectionIndex) {
                 if (end > groupSize.value(g)) groupSize[g] = end;
                 byGroup[g].append(&f);
             }
+            QHash<int, int> sizeCount;
+            for (auto it = groupSize.cbegin(); it != groupSize.cend(); ++it)
+                ++sizeCount[(it.value() + 7) / 8];
             for (auto it = groupSize.cbegin(); it != groupSize.cend(); ++it) {
-                if ((it.value() + 7) / 8 != int(node->payload.size())) continue;
+                const int bytes = (it.value() + 7) / 8;
+                if (bytes != int(node->payload.size())) continue;
+                // Only use a size match when it is unambiguous; otherwise show
+                // the raw record instead of guessing the wrong field group.
+                if (sizeCount.value(bytes) != 1) continue;
                 matched = byGroup.value(it.key());
+                inferredBySize = true;
                 break;
             }
         }
-        if (matched.isEmpty()) continue;
+        if (matched.isEmpty()) {
+            auto* rawBox =
+                new QGroupBox(QString("%1  (%2)  -  raw record").arg(blockName, tagText));
+            auto* rawLayout = new QVBoxLayout(rawBox);
+            auto* note = new QLabel(
+                QString("No decoded field schema matches this record tag. Showing %1 payload "
+                        "bytes; edit the hex payload below.")
+                    .arg(node->payload.size()));
+            note->setObjectName("muted");
+            note->setWordWrap(true);
+            rawLayout->addWidget(note);
+            QFont mono("Consolas");
+            mono.setStyleHint(QFont::Monospace);
+            mono.setPointSize(9);
 
-        auto* box = new QGroupBox(QString("%1  (%2)").arg(blockName, tagText));
+            const uint16_t rawTag = node->tag;
+            const uint16_t rawInst = node->inst;
+            const size_t rawLen = node->payload.size();
+            auto* hexRow = new QHBoxLayout;
+            hexRow->addWidget(new QLabel("Hex:"));
+            auto* hexEdit = new QLineEdit;
+            QString hexText;
+            for (uint8_t b : node->payload)
+                hexText += QString("%1").arg(int(b), 2, 16, QChar('0'));
+            hexEdit->setText(hexText.toUpper());
+            hexEdit->setFont(mono);
+            hexRow->addWidget(hexEdit, 1);
+            auto* apply = new QPushButton("Apply");
+            hexRow->addWidget(apply);
+            rawLayout->addLayout(hexRow);
+            auto commitRaw = [this, rawTag, rawInst, rawLen, hexEdit, sectionIndex] {
+                QString text;
+                for (QChar ch : hexEdit->text())
+                    if (ch.isDigit() || (ch >= 'A' && ch <= 'F') || (ch >= 'a' && ch <= 'f'))
+                        text += ch;
+                if (text.size() != int(rawLen) * 2) return;
+                std::vector<uint8_t> payload(rawLen);
+                for (size_t i = 0; i < rawLen; ++i) {
+                    bool ok = false;
+                    const int value = text.mid(int(i * 2), 2).toInt(&ok, 16);
+                    if (!ok) return;
+                    payload[i] = uint8_t(value);
+                }
+                if (!model_->SetRecordPayload(rawTag, rawInst, payload)) return;
+                refreshAfterEdit();
+                fillCpsEditor(sectionIndex);
+            };
+            connect(apply, &QPushButton::clicked, this, commitRaw);
+            connect(hexEdit, &QLineEdit::editingFinished, this, commitRaw);
+
+            auto* raw = new QPlainTextEdit;
+            raw->setReadOnly(true);
+            raw->setFont(mono);
+            QString dump;
+            for (size_t off = 0; off < node->payload.size(); off += 16) {
+                dump += QString("%1  ").arg(static_cast<qulonglong>(off), 4, 16, QChar('0'))
+                            .toUpper();
+                const size_t n = std::min<size_t>(16, node->payload.size() - off);
+                for (size_t j = 0; j < 16; ++j) {
+                    if (j < n)
+                        dump += QString("%1 ").arg(int(node->payload[off + j]), 2, 16, QChar('0'))
+                                    .toUpper();
+                    else
+                        dump += "   ";
+                }
+                dump += " |";
+                for (size_t j = 0; j < n; ++j) {
+                    const uint8_t c = node->payload[off + j];
+                    dump += (c >= 0x20 && c < 0x7F) ? QChar(ushort(c)) : QChar('.');
+                }
+                dump += "|\n";
+            }
+            raw->setPlainText(dump);
+            raw->setMinimumHeight(220);
+            rawLayout->addWidget(raw);
+            cpsEditorFormLayout_->addWidget(rawBox);
+            continue;
+        }
+
+        auto* box = new QGroupBox(
+            QString("%1  (%2)%3")
+                .arg(blockName, tagText,
+                     inferredBySize ? "  -  field layout inferred by payload size" : ""));
         auto* grid = new QGridLayout(box);
         grid->setHorizontalSpacing(18);
         grid->setVerticalSpacing(6);
@@ -4349,6 +4458,37 @@ void MainWindow::refreshPorts() {
         port_->setEditText("COM20");
 }
 
+void MainWindow::addChannel() {
+    if (!model_) return;
+    int zone = editZone_;
+    if (zone < 0 || !model_->Zone(zone)) zone = 0;
+    if (!model_->Zone(zone)) {
+        QMessageBox::information(this, "Add channel", "This codeplug has no zone to add to.");
+        return;
+    }
+    bool ok = false;
+    const QString name = QInputDialog::getText(this, "Add channel", "Channel name:",
+                                               QLineEdit::Normal, "NEW CHANNEL", &ok);
+    if (!ok || name.trimmed().isEmpty()) return;
+    double rx = rxEdit_ ? rxEdit_->text().toDouble(&ok) : 0.0;
+    if (!ok || rx <= 0) rx = 806.0;
+    double tx = txEdit_ ? txEdit_->text().toDouble(&ok) : 0.0;
+    if (!ok || tx <= 0) tx = 851.0;
+    int index = -1;
+    if (!model_->AddChannel(zone, name.trimmed().toStdString(), rx, tx, &index)) {
+        QMessageBox::warning(
+            this, "Add channel",
+            "The channel could not be added. The zone may be at model capacity or this "
+            "codeplug does not use the supported conventional layout.");
+        return;
+    }
+    refreshAfterEdit();
+    buildModelTree();
+    showZones();
+    selectChannelRow(zone, index);
+    statusBar()->showMessage("Channel added in memory - File > Save to keep it.", 8000);
+}
+
 void MainWindow::applyChannelEdit() {
     if (!model_ || editZone_ < 0) return;
     const auto* z = model_->Zone(editZone_);
@@ -4553,21 +4693,54 @@ void MainWindow::readRadio() {
         }
         opendepot::RadioInfo info;
         session->Info(info, err);
+        QString profileDb;
+        for (const char* relative : {"data/depot_profiles.bin", "../../../data/depot_profiles.bin",
+                                     "../../data/depot_profiles.bin"}) {
+            const QString candidate =
+                QDir(QApplication::applicationDirPath()).filePath(QString::fromLatin1(relative));
+            if (QFileInfo::exists(candidate)) {
+                profileDb = candidate;
+                break;
+            }
+        }
         opendepot::Codeplug tpl = base;
+        std::string model = info.model;
+        if (model.empty()) model = tpl.header.model;
         if (tpl.records.empty()) {
-            const std::string model =
-                info.model.empty() ? opendepot::BuiltinFirstModel() : info.model;
+            if (model.empty()) model = opendepot::BuiltinFirstModel();
             std::string berr;
             if (!opendepot::BuiltinTemplate(model, tpl, berr) || tpl.records.empty()) {
-                j->error = QString::fromStdString("No template for the connected model");
+                if (!profileDb.isEmpty()) {
+                    std::vector<opendepot::DepotProfileInfo> profiles;
+                    std::string derr;
+                    if (opendepot::ListDepotProfiles(profileDb.toStdString(), profiles, derr)) {
+                        for (const auto& p : profiles) {
+                            if (p.model == model) {
+                                opendepot::LoadDepotProfile(profileDb.toStdString(), model,
+                                                            p.package, tpl, derr);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            if (tpl.records.empty()) {
+                j->error = QString::fromStdString("No template or native profile for " + model);
                 j->done = true;
                 return;
             }
         }
-        std::string model = info.model;
         if (model.empty()) model = tpl.header.model;
         std::vector<opendepot::ReadRequest> modelReqs;
-        opendepot::ModelReadRequests(model, modelReqs);
+        std::vector<opendepot::ReadRequest> validatedReqs;
+        opendepot::ModelReadRequests(model, validatedReqs);
+        modelReqs = validatedReqs;
+        if (modelReqs.empty() && !profileDb.isEmpty()) {
+            std::string derr;
+            opendepot::BuildDepotReadRequests(profileDb.toStdString(), model, modelReqs, derr);
+        }
+        if (modelReqs.empty()) opendepot::BuiltinReadRequests(modelReqs);
+        if (validatedReqs.empty()) opendepot::AppendTypeScan(modelReqs);
         std::vector<opendepot::RadioReadRequest> reqs;
         if (!modelReqs.empty()) {
             for (const auto& r : modelReqs) reqs.push_back({r.part, r.tag, r.inst, r.len});
@@ -4577,8 +4750,22 @@ void MainWindow::readRadio() {
                                 static_cast<uint16_t>(r.id & 0xFFFF),
                                 static_cast<uint16_t>(r.raw.size() - 6)});
         }
+        std::map<std::pair<uint16_t, uint16_t>, opendepot::RadioReadRequest> typeMap;
+        for (const auto& r : reqs) {
+            const auto key = std::make_pair(r.part, r.tag);
+            auto it = typeMap.find(key);
+            if (it == typeMap.end()) {
+                typeMap.emplace(key, r);
+            } else {
+                if (r.inst < it->second.inst) it->second.inst = r.inst;
+                if (r.len > it->second.len) it->second.len = r.len;
+            }
+        }
+        std::vector<opendepot::RadioReadRequest> types;
+        types.reserve(typeMap.size());
+        for (const auto& kv : typeMap) types.push_back(kv.second);
         std::vector<opendepot::Record> recs;
-        if (!session->ReadRequests(reqs, recs, err)) {
+        if (!session->ReadAllTypeInstances(types, recs, err)) {
             session->Close();
             j->error = QString::fromStdString(err);
             j->done = true;

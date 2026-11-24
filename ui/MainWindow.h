@@ -88,6 +88,7 @@ private:
     void applyFieldEdit(QTableWidgetItem* item);
     void exportPlainText();
     void applyChannelEdit();
+    void addChannel();
     void refreshPorts();
     void refreshAfterEdit();
     void refreshZones();
